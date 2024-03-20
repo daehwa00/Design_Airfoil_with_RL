@@ -2,7 +2,7 @@ import numpy as np
 import pyvista as pv
 
 
-def generate_3d_gaussian_mesh(center, covariance_matrix, grid_size=50):
+def generate_3d_gaussian_mesh(center, covariance_matrix, grid_size=50, isosurfaces=4):
     # 격자 범위 정의
     x, y, z = np.mgrid[
         -3 : 3 : complex(grid_size),
@@ -33,16 +33,24 @@ def generate_3d_gaussian_mesh(center, covariance_matrix, grid_size=50):
     grid.point_data["scalars"] = pdf.flatten(order="F")
 
     # 등고선(메시) 생성
-    contours = grid.contour(isosurfaces=4, scalars="scalars")
+    contours = grid.contour(isosurfaces=isosurfaces, scalars="scalars")
     return contours
 
 
-# 중심, 공분산 행렬 및 격자 크기 설정
-center = np.array([0, 0, 0])
-covariance_matrix = np.array([[1, 0.5, 0], [0.5, 1, 0.5], [0, 0.5, 1]])
+# 설정: 중심, 공분산 행렬, 격자 크기
+center1 = np.array([0, 0, 0])
+covariance_matrix1 = np.array([[1, 0.5, 0], [0.5, 1, 0.5], [0, 0.5, 1]])
 
-# 메시 생성 및 시각화
-mesh = generate_3d_gaussian_mesh(center, covariance_matrix, grid_size=50)
+center2 = np.array([0.5, 0.5, 0.5])
+covariance_matrix2 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+# 메시 생성
+mesh1 = generate_3d_gaussian_mesh(center1, covariance_matrix1, grid_size=50)
+mesh2 = generate_3d_gaussian_mesh(center2, covariance_matrix2, grid_size=50)
+
+# 시각화: 두 메시를 하나의 플롯에 추가
 plotter = pv.Plotter()
-plotter.add_mesh(mesh, color="white", show_edges=True)
+plotter.add_mesh(mesh1, color="blue", show_edges=True, label="Gaussian 1")
+plotter.add_mesh(mesh2, color="red", show_edges=True, label="Gaussian 2")
+plotter.add_legend()
 plotter.show()
