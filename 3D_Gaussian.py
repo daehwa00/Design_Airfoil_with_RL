@@ -37,20 +37,53 @@ def generate_3d_gaussian_mesh(center, covariance_matrix, grid_size=50, isosurfac
     return contours
 
 
-# 설정: 중심, 공분산 행렬, 격자 크기
-center1 = np.array([0, 0, 0])
-covariance_matrix1 = np.array([[1, 0.5, 0], [0.5, 1, 0.5], [0, 0.5, 1]])
+def calculate_pdf(center, covariance_matrix, grid, grid_size):
+    inv_cov = np.linalg.inv(covariance_matrix)
+    det_cov = np.linalg.det(covariance_matrix)
+    n = np.sqrt((2 * np.pi) ** 3 * det_cov)
+    diff = grid - center
+    exp_part = np.exp(-0.5 * (np.einsum("ij,jk,ik->i", diff, inv_cov, diff)))
+    pdf = exp_part / n
+    return pdf.reshape((grid_size, grid_size, grid_size))
 
-center2 = np.array([0.5, 0.5, 0.5])
-covariance_matrix2 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
-# 메시 생성
-mesh1 = generate_3d_gaussian_mesh(center1, covariance_matrix1, grid_size=50)
-mesh2 = generate_3d_gaussian_mesh(center2, covariance_matrix2, grid_size=50)
+def create_smooth_gaussian_mesh(centers, covariances, grid_size=50, isosurfaces=4):
+    x, y, z = np.mgrid[
+        -3 : 3 : complex(grid_size),
+        -3 : 3 : complex(grid_size),
+        -3 : 3 : complex(grid_size),
+    ]
+    grid = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
 
-# 시각화: 두 메시를 하나의 플롯에 추가
+    # 합쳐진 PDF 초기화
+    combined_pdf = np.zeros((grid_size, grid_size, grid_size))
+
+    # 각 가우시안 분포에 대한 PDF 계산 및 합치기
+    for center, cov in zip(centers, covariances):
+        pdf = calculate_pdf(center, cov, grid, grid_size)
+        combined_pdf += pdf
+
+    # PyVista 그리드 생성
+    grid = pv.ImageData()
+    grid.dimensions = np.array(combined_pdf.shape)
+    grid.spacing = [6 / (grid_size - 1)] * 3
+    grid.origin = [x.min(), y.min(), z.min()]
+    grid.point_data["scalars"] = combined_pdf.flatten(order="F")
+
+    # 등고선(메시) 생성
+    contours = grid.contour(isosurfaces=isosurfaces, scalars="scalars")
+    return contours
+
+
+# 설정
+centers = [np.array([0, 0, 0]), np.array([0.5, 0.5, 0.5])]
+covariances = [
+    np.array([[1, 0.5, 0], [0.5, 1, 0.5], [0, 0.5, 1]]),
+    np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
+]
+
+# 부드러운 메시 생성 및 시각화
+smooth_mesh = create_smooth_gaussian_mesh(centers, covariances, grid_size=50)
 plotter = pv.Plotter()
-plotter.add_mesh(mesh1, color="blue", show_edges=True, label="Gaussian 1")
-plotter.add_mesh(mesh2, color="red", show_edges=True, label="Gaussian 2")
-plotter.add_legend()
+plotter.add_mesh(smooth_mesh, color="blue", show_edges=True)
 plotter.show()
