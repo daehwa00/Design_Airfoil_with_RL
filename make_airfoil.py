@@ -126,7 +126,7 @@ def interpolate_linear_functions(hull_points, N=100):
     return values
 
 
-def get_airfoil_points(circles, N=80, plot=False):
+def get_airfoil_points(circles, N=100, plot=False):
     all_points = generate_all_circle_points(circles)
     hull = ConvexHull(all_points)
     hull_points = all_points[hull.vertices]
