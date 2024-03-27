@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import torch
 
 
 class AirfoilCNN(nn.Module):
@@ -22,25 +23,28 @@ class AirfoilCNN(nn.Module):
 
 
 class PPONetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, action_dim=2):
         super(PPONetwork, self).__init__()
         self.encoder = AirfoilCNN()
         # policy network
-        self.policy = nn.Sequential(
-            nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 2), nn.Softmax(dim=-1)
+        self.policy_mean = nn.Sequential(
+            nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, action_dim), nn.Sigmoid()
         )
+        self.policy_std = nn.Parameter(torch.zeros(action_dim))
         # value network
         self.value = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 1))
+
         self._initialize_weights()
 
         # Optimizer
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
 
     def forward(self, x):
         x = self.encoder(x)
-        policy = self.policy(x)
+        action_mean = self.policy_mean(x)
+        action_std = torch.exp(self.policy_std).expand_as(action_mean)
         value = self.value(x)
-        return policy, value
+        return action_mean, action_std, value
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -49,3 +53,4 @@ class PPONetwork(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.xavier_normal_(m.weight)
                 nn.init.constant_(m.bias, 0)
+        nn.init.constant_(self.policy_std, 0.1)
