@@ -1,5 +1,8 @@
 from model.agent import PPONetwork
-from AirfoilEnv import CustomAirfoilEnv
+from AirfoilEnv import CustomAirfoilEnv, Airfoil
+from make_airfoil import get_airfoil_points
+from xfoil.xfoil import XFoil
+import matplotlib.pyplot as plt
 
 import torch
 
@@ -25,6 +28,15 @@ def train(env, agent, epochs=50, steps_per_epoch=10):
         print(f'Epoch: {epoch}, Total Reward: {total_reward}')
 
 if __name__ == '__main__':
-    env = CustomAirfoilEnv()
-    agent = PPONetwork()
-    train(env, agent)
+    # env = CustomAirfoilEnv()
+    # agent = PPONetwork()
+    circles = [((0, 0), 0.005), ((0.1, 0), 0.03), ((0.2, 0), 0.03), ((1, 0), 0.001)]
+    airfoil_points = get_airfoil_points(circles,plot=True)
+    plt.plot(airfoil_points[:, 0], airfoil_points[:, 1])
+    plt.show()
+    airfoil = Airfoil(airfoil_points[:, 0], airfoil_points[:, 1])
+    xfoil = XFoil()
+    xfoil.airfoil = airfoil
+    xfoil.Re = 1e6
+    xfoil.max_iter = 40
+    print(xfoil.a(0))

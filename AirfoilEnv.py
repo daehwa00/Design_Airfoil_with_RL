@@ -5,10 +5,8 @@ from xfoil.model import Airfoil
 class CustomAirfoilEnv:
     def __init__(self, env_batch_size=1):
         self.xfoil = XFoil()
-        self.airfoil = Airfoil.naca0012()  # 예시로 NACA 0012, 실제로는 에이전트의 action에 따라 변경될 수 있음
-        self.xfoil.airfoil = self.airfoil
-        self.Re = 1e6  # 레이놀즈 수
-        self.xfoil.Re = self.Re
+        # self.xfoil.airfoil = None
+        self.xfoil.Re = 1e6
         self.xfoil.max_iter = 40  # 최대 반복 횟수
         self.states = np.zeros((env_batch_size, 32))
         # 초기 상태 설정 등
@@ -45,3 +43,37 @@ class CustomAirfoilEnv:
 
 # 환경 사용 예시
 env = CustomAirfoilEnv()
+
+class Airfoil(object):
+    def __init__(self, x, y):
+        super().__init__()
+        self.coords = np.ndarray((0, 2))
+        self.x = x
+        self.y = y
+
+    @property
+    def n_coords(self):
+        """int: Number of coordinates which define the airfoil surface."""
+        return self.coords.shape[0]
+
+    @property
+    def x(self):
+        """np.ndarray: List of x-coordinates of the airfoil surface."""
+        return self.coords[:, 0]
+
+    @x.setter
+    def x(self, value):
+        v = value.flatten()
+        self.coords = np.resize(self.coords, (v.size, 2))
+        self.coords[:, 0] = v[:]
+
+    @property
+    def y(self):
+        """np.ndarray: List of y-coordinates of the airfoil surface."""
+        return self.coords[:, 1]
+
+    @y.setter
+    def y(self, value):
+        v = value.flatten()
+        self.coords = np.resize(self.coords, (v.size, 2))
+        self.coords[:, 1] = v[:]
