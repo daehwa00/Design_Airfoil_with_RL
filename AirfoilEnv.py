@@ -1,79 +1,208 @@
 import numpy as np
 from xfoil import XFoil
 from xfoil.model import Airfoil
+from scipy.spatial import ConvexHull
+import matplotlib.pyplot as plt
+
 
 class CustomAirfoilEnv:
+    """
+    x는 0 ~ 0.8, r은 0 ~ 0.2
+        circles = [
+        ((0, 0), 0.05),
+        ((0.1, 0), 0.10),
+        ((0.3, 0), 0.15),
+        ((0.4, 0), 0.14),
+        ((1, 0), 0.001),
+    ]
+    """
+
     def __init__(self, env_batch_size=1):
         self.xfoil = XFoil()
-        # self.xfoil.airfoil = None
         self.xfoil.Re = 1e6
-        self.xfoil.max_iter = 40  # 최대 반복 횟수
+        self.xfoil.max_iter = 100  # 최대 반복 횟수
+        self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
+        self.state = self.get_airfoil_points(self.circles)
+        self.xfoil.airfoil = Airfoil(self.state[:, 0], self.state[:, 1])
         self.states = np.zeros((env_batch_size, 32))
         # 초기 상태 설정 등
 
         self.env_batch_size = env_batch_size
 
     def reset(self):
-        self.states = np.zeros((self.env_batch_size, 32))
-        return self.get_state()  # 초기 상태 반환
+        self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
+        self.state = self.get_airfoil_points(self.circles)
+        self.xfoil.airfoil = Airfoil(self.state[:, 0], self.state[:, 1])
+        return self.get_state()
 
     def step(self, action):
-        # 에이전트로부터 action을 받아 에어포일의 형상을 업데이트하고, 성능을 평가합니다.
-        # action 예: (x, y, r)을 사용하여 에어포일 형상 변경
-        # 여기서는 에어포일의 형상을 직접 변경하는 대신 고정된 에어포일(NACA 0012)을 사용하여 성능 평가를 수행합니다.
-        
-        alpha = action  # 공격각을 action으로 설정합니다. 실제 프로젝트에서는 다른 파라미터도 조정 가능
-        
-        cl, cd, cm = self.xfoil.a(alpha)
-        
+        action = action.squeeze()
+        # 입력으로 0 ~ 1 사이를 받기 때문에 scaling 해야함
+        action[0] = action[0] * 0.8
+        action[1] = action[1] * 0.2
+
+        self.circles.append(((action[0], 0), action[1]))  # add circle
+        new_airfoil_points = self.get_airfoil_points(self.circles)
+        self.xfoil.airfoil = Airfoil(new_airfoil_points[:, 0], new_airfoil_points[:, 1])
+        a, cl, cd, cm, cp = self.xfoil.aseq(-20, 20, 0.5)
+
         # 리워드 계산: 예를 들어, 양력계수와 항력계수의 비율을 사용할 수 있습니다.
-        reward = cl / (cd + 1e-5)  # 항력계수가 0인 경우를 대비해 작은 값을 더합니다.
-        
+        reward = np.max(cl / (cd + 1e-5))
+
+        if reward == np.inf:
+            reward = 0
+
         # 다음 상태를 결정합니다. 실제 프로젝트에서는 변경된 에어포일 형상 등을 상태로 사용할 수 있습니다.
         next_state = self.get_state()
-        
-        done = True  # 한 스텝 후에 학습이 종료됩니다. 필요에 따라 조건을 변경하세요.
-        
-        return next_state, reward, done, {}  # 다음 상태, 리워드, 종료 여부, 추가 정보 반환
+        self.state = next_state
+
+        return next_state, reward
 
     def get_state(self):
-        # 현재 에어포일의 상태를 반환합니다. 실제 프로젝트에서는 에어포일의 형상, 레이놀즈 수 등을 포함할 수 있습니다.
-        # 이 예제에서는 간단화를 위해 상태를 구체적으로 정의하지 않습니다.
-        return np.array([0])  # 임시 상태 반환
+        return self.state
 
-# 환경 사용 예시
-env = CustomAirfoilEnv()
+    def generate_all_circle_points(self, circles, num_points=100):
+        """
+        여러 원들에 대한 점들을 생성하고 합칩니다.
 
-class Airfoil(object):
-    def __init__(self, x, y):
-        super().__init__()
-        self.coords = np.ndarray((0, 2))
-        self.x = x
-        self.y = y
+        :param circles: 각 원의 (중심, 반지름) 튜플을 포함하는 리스트입니다.
+        :param num_points: 각 원을 대표하는 점의 수입니다 (기본값: 100).
+        :return: 생성된 모든 원들의 점들을 합친 numpy 배열입니다.
+        """
 
-    @property
-    def n_coords(self):
-        """int: Number of coordinates which define the airfoil surface."""
-        return self.coords.shape[0]
+        def generate_circle_points(center, radius, num_points=100):
+            return np.array(
+                [
+                    [
+                        center[0] + np.cos(2 * np.pi / num_points * x) * radius,
+                        center[1] + np.sin(2 * np.pi / num_points * x) * radius,
+                    ]
+                    for x in range(num_points)
+                ]
+            )
 
-    @property
-    def x(self):
-        """np.ndarray: List of x-coordinates of the airfoil surface."""
-        return self.coords[:, 0]
+        # 모든 원들의 점들을 생성하고 합칩니다.
+        all_points = np.concatenate(
+            [
+                generate_circle_points(center, radius, num_points)
+                for center, radius in circles
+            ]
+        )
 
-    @x.setter
-    def x(self, value):
-        v = value.flatten()
-        self.coords = np.resize(self.coords, (v.size, 2))
-        self.coords[:, 0] = v[:]
+        return all_points
 
-    @property
-    def y(self):
-        """np.ndarray: List of y-coordinates of the airfoil surface."""
-        return self.coords[:, 1]
+    def interpolate_linear_functions(self, hull_points, N=100):
+        x_min = np.min(hull_points[:, 0])
+        x_argmin = np.argmin(hull_points[:, 0])
+        y_standard = hull_points[x_argmin, 1]
+        hull_points -= [x_min, y_standard]
 
-    @y.setter
-    def y(self, value):
-        v = value.flatten()
-        self.coords = np.resize(self.coords, (v.size, 2))
-        self.coords[:, 1] = v[:]
+        N_front = int(0.3 * N)
+        N_back = N - N_front
+
+        # x 좌표의 최대값으로 모든 x 좌표를 정규화
+        x_max = np.max(hull_points[:, 0])
+        hull_points[:, 0] /= x_max
+        hull_points[:, 1] /= x_max  # y 좌표도 x 최대값으로 나누어 비율 유지
+
+        hull_points = np.vstack([hull_points, hull_points[0]])  # 경로 닫기
+
+        # x 좌표를 기준으로 정렬 (시계 방향 또는 반시계 방향 보장)
+        hull_points = hull_points[np.argsort(hull_points[:, 0])]
+
+        # UPPER
+        upper_hull_points = hull_points[hull_points[:, 1] >= 0]
+        # 각 선분에 대한 x 및 y의 기울기 계산
+        upper_dx = np.diff(upper_hull_points[:, 0])
+        upper_dy = np.diff(upper_hull_points[:, 1])
+        upper_slopes = upper_dy / upper_dx
+        upper_intercepts = (
+            upper_hull_points[:-1, 1] - upper_slopes * upper_hull_points[:-1, 0]
+        )
+
+        # N+1을 사용하고 endpoint=False를 추가합니다.
+        upper_front_x_values = np.geomspace(
+            0.0001, 0.1, N_front, endpoint=False
+        )  # 0 대신 최소값으로 시작
+        upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
+        upper_x_values = np.concatenate((upper_front_x_values, upper_back_x_values))
+        upper_y_values = np.zeros(N)
+
+        upper_current_segment = 0
+        for i in range(N):
+            upper_x = upper_x_values[i]
+            while (
+                upper_current_segment < len(upper_slopes) - 1
+                and upper_x > upper_hull_points[upper_current_segment + 1, 0]
+            ):
+                upper_current_segment += 1
+            upper_y_values[i] = (
+                upper_slopes[upper_current_segment] * upper_x
+                + upper_intercepts[upper_current_segment]
+            )
+
+        upper_x_values = np.flip(upper_x_values)  # x 좌표를 다시 뒤집습니다.
+        upper_y_values = np.flip(upper_y_values)
+        # LOWER
+        lower_hull_points = hull_points[hull_points[:, 1] <= 0]
+
+        lower_dx = np.diff(lower_hull_points[:, 0])
+        lower_dy = np.diff(lower_hull_points[:, 1])
+        lower_slopes = lower_dy / lower_dx
+        lower_intercepts = (
+            lower_hull_points[:-1, 1] - lower_slopes * lower_hull_points[:-1, 0]
+        )
+
+        lower_front_x_values = np.geomspace(
+            0.0001, 0.1, N_front, endpoint=False
+        )  # 0 대신 최소값으로 시작
+        lower_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
+        lower_x_values = np.concatenate((lower_front_x_values, lower_back_x_values))
+        lower_y_values = np.zeros(N)
+
+        lower_current_segment = 0
+        for i in range(N):
+            lower_x = lower_x_values[i]
+            while (
+                lower_current_segment < len(lower_slopes) - 1
+                and lower_x > lower_hull_points[lower_current_segment + 1, 0]
+            ):
+                lower_current_segment += 1
+            lower_y_values[i] = (
+                lower_slopes[lower_current_segment] * lower_x
+                + lower_intercepts[lower_current_segment]
+            )
+
+        x_values = np.concatenate((upper_x_values, lower_x_values))
+        y_values = np.concatenate((upper_y_values, lower_y_values))
+        values = np.vstack((x_values, y_values)).T
+
+        return values
+
+    def get_airfoil_points(self, circles, N=100, plot=False):
+        all_points = self.generate_all_circle_points(circles)
+        hull = ConvexHull(all_points)
+        hull_points = all_points[hull.vertices]
+        interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
+        if plot:
+            # plt.figure(figsize=(10, 5))
+            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
+            plt.gca().set_aspect("equal")
+            plt.plot(
+                np.array(hull_points[:, 0]),
+                np.array(hull_points[:, 1]),
+                "o-",
+                label="Hull Points",
+            )
+            plt.plot(
+                np.array(interpolated_points[:, 0]),
+                np.array(interpolated_points[:, 1]),
+                ".r",
+                label="Interpolated Points",
+            )
+            plt.legend()
+            plt.xlabel("X")
+            plt.ylabel("Y")
+            plt.title("Linear Interpolation of Convex Hull Points")
+            plt.show()
+        return interpolated_points
