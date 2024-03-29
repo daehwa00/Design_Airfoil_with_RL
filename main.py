@@ -4,7 +4,7 @@ from torch.distributions import Normal
 from model.agent import PPONetwork
 from AirfoilEnv import CustomAirfoilEnv
 from matplotlib import pyplot as plt
-
+from utils import set_seed
 
 epochs = 50
 max_iter = 20
@@ -85,12 +85,10 @@ if __name__ == "__main__":
     env = CustomAirfoilEnv()
     agent = PPONetwork()
     episode_returns = []  # 각 에피소드의 총 반환값을 저장하는 리스트
+    set_seed(42)  # 시드 고정
 
     for epoch in range(epochs):
         state = env.reset()
-        done = False
-
-        # 데이터 저장을 위한 리스트 초기화
         states = []
         actions = []
         log_probs = []
@@ -101,8 +99,9 @@ if __name__ == "__main__":
         for _ in range(max_iter):
             state_tensor = torch.FloatTensor(state).unsqueeze(0).permute(0, 2, 1)
             action_mean, action_std, value = agent(state_tensor)
-            dist = Normal(action_mean, action_std.exp())
+            dist = Normal(action_mean, action_std)
             action = dist.sample()
+            action = action.clamp(0,1)
             log_prob = dist.log_prob(action).sum(-1)
 
             # 환경으로부터 numpy 배열 형태의 행동이 필요한 경우

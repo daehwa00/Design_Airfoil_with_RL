@@ -3,7 +3,9 @@ from xfoil import XFoil
 from xfoil.model import Airfoil
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
-
+import os
+import sys
+from contextlib import contextmanager
 
 class CustomAirfoilEnv:
     """
@@ -44,13 +46,12 @@ class CustomAirfoilEnv:
         self.circles.append(((action[0], 0), action[1]))  # add circle
         new_airfoil_points = self.get_airfoil_points(self.circles)
         self.xfoil.airfoil = Airfoil(new_airfoil_points[:, 0], new_airfoil_points[:, 1])
-        a, cl, cd, cm, cp = self.xfoil.aseq(-20, 20, 0.5)
+        cl, cd, cm, cp = self.xfoil.a(5)
 
-        # 리워드 계산: 예를 들어, 양력계수와 항력계수의 비율을 사용할 수 있습니다.
-        reward = np.max(cl / (cd + 1e-5))
+        reward = cl / cd
 
-        if reward == np.inf:
-            reward = 0
+        if reward == 0:
+            reward = -1
 
         # 다음 상태를 결정합니다. 실제 프로젝트에서는 변경된 에어포일 형상 등을 상태로 사용할 수 있습니다.
         next_state = self.get_state()
@@ -205,4 +206,25 @@ class CustomAirfoilEnv:
             plt.ylabel("Y")
             plt.title("Linear Interpolation of Convex Hull Points")
             plt.show()
+        else:
+            # plt.figure(figsize=(10, 5))
+            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
+            plt.gca().set_aspect("equal")
+            plt.plot(
+                np.array(hull_points[:, 0]),
+                np.array(hull_points[:, 1]),
+                "o-",
+                label="Hull Points",
+            )
+            plt.plot(
+                np.array(interpolated_points[:, 0]),
+                np.array(interpolated_points[:, 1]),
+                ".r",
+                label="Interpolated Points",
+            )
+            plt.legend()
+            plt.xlabel("X")
+            plt.ylabel("Y")
+            plt.title("Linear Interpolation of Convex Hull Points")
+            plt.savefig('airfoil.png')
         return interpolated_points
