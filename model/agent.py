@@ -1,56 +1,63 @@
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 import torch
+import torch.nn as nn
+from torch.optim import Adam
+from model.model import Actor, Critic
 
 
-class AirfoilCNN(nn.Module):
-    def __init__(self):
-        super(AirfoilCNN, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=2, out_channels=64, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv1d(
-            in_channels=64, out_channels=128, kernel_size=3, padding=1
-        )
-        self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(128 * 50, 128)  # 입력 길이가 200으로 가정
+class Agent(nn.Module):
+    def __init__(self, n_actions=2, lr=1e-4):
+        super().__init__()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Actor
+        self.actor = Actor(n_actions).to(self.device)
+        # Critic
+        self.critic = Critic().to(self.device)
 
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))  # 첫 번째 컨볼루션 및 풀링
-        x = self.pool(F.relu(self.conv2(x)))  # 두 번째 컨볼루션 및 풀링
-        x = x.view(-1, 128 * 50)  # Flatten
-        x = F.relu(self.fc1(x))
-        return x
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=lr, eps=1e-8)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr * 5, eps=1e-8)
+
+        self.critic_loss = torch.nn.MSELoss()
+
+    def optimize(self, actor_loss, critic_loss):
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+
+        self.critic_optimizer.zero_grad()
+        critic_loss.backward()
+        self.critic_optimizer.step()
 
 
-class PPONetwork(nn.Module):
-    def __init__(self, action_dim=2):
-        super(PPONetwork, self).__init__()
-        self.encoder = AirfoilCNN()
-        # policy network
-        self.policy_mean = nn.Sequential(
-            nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, action_dim), nn.Sigmoid()
-        )
-        self.policy_std = nn.Parameter(torch.zeros(action_dim))
-        # value network
-        self.value = nn.Sequential(nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 1))
+    def choose_dists(self, state, use_grad=True):
+        if use_grad:
+            dist = self.actor(state)
+        else:
+            with torch.no_grad():
+                dist = self.actor(state)
+        return dist
 
-        self._initialize_weights()
+    def get_value(self, state, use_grad=True):
+        # concat
+        if state.dim() == 1:
+            state = state.unsqueeze(0)
+        if use_grad:
+            value = self.critic(state)
 
-        # Optimizer
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-4)
+        else:
+            with torch.no_grad():
+                value = self.critic(state)
+        return value
 
-    def forward(self, x):
-        x = self.encoder(x)
-        action_mean = self.policy_mean(x)
-        action_std = torch.exp(self.policy_std).expand_as(action_mean)
-        value = self.value(x)
-        return action_mean, action_std, value
+    def choose_actions(self, dist):
+        action = dist.sample()
+        return action
 
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv1d):
-                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
-            elif isinstance(m, nn.Linear):
-                nn.init.xavier_normal_(m.weight)
-                nn.init.constant_(m.bias, 0)
-        nn.init.constant_(self.policy_std, 0.1)
+    def scale_actions(self, actions):
+        actions = nn.Sigmoid()(actions)
+        scaled_actions = torch.zeros_like(actions)
+        # x 값을 0~0.8로 스케일링
+        scaled_actions[:, :0] = actions[:, :0] * 0.8
+        # r 값을 0~0.2로 스케일링
+        scaled_actions[:, 1] = actions[:, 1] * 0.2
+
+        return scaled_actions

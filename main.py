@@ -1,24 +1,24 @@
-import torch
-import torch.nn.functional as F
-from torch.distributions import Normal
-from model.agent import PPONetwork
-from AirfoilEnv import CustomAirfoilEnv
-from matplotlib import pyplot as plt
-from torch import nn
+from model.agent import Agent
+from AirfoilEnv import make_env
 from train import Train
 from utils import set_seed
 
+
+ENV_NAME = "CustomAirfoilEnv"
+Number_of_points = 100
 epochs = 50
 T = 20
 clip_range = 0.2
 beta = 0.01  # 엔트로피 항에 대한 가중치
-mini_batch_size = 5
+mini_batch_size = 10
+batch_size = 16
+processes = batch_size  
 
 
 
 if __name__ == "__main__":
     set_seed(42)  # 시드 고정
-    env = CustomAirfoilEnv()
-    agent = PPONetwork()
-    trainer = Train(env=env, env_name="Airfoil", horizon=T, epochs=epochs, mini_batch_size=mini_batch_size, epsilon= clip_range)
+    env = make_env()
+    agent = Agent(n_actions=2, lr=1e-4)
+    trainer = Train(env=env, env_name=ENV_NAME, agent=agent,horizon=T, epochs=epochs, mini_batch_size=mini_batch_size, epsilon= clip_range)
     trainer.step()

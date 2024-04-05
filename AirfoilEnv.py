@@ -3,33 +3,15 @@ from xfoil import XFoil
 from xfoil.model import Airfoil
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
-import os
-import sys
-from contextlib import contextmanager
 
 class CustomAirfoilEnv:
-    """
-    x는 0 ~ 0.8, r은 0 ~ 0.2
-        circles = [
-        ((0, 0), 0.05),
-        ((0.1, 0), 0.10),
-        ((0.3, 0), 0.15),
-        ((0.4, 0), 0.14),
-        ((1, 0), 0.001),
-    ]
-    """
-
-    def __init__(self, env_batch_size=1):
+    def __init__(self):
         self.xfoil = XFoil()
         self.xfoil.Re = 1e6
         self.xfoil.max_iter = 100  # 최대 반복 횟수
         self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
-        self.state = self.get_airfoil_points(self.circles)
+        self.state = self.get_airfoil_points(self.circles)  # state는 점을 제공
         self.xfoil.airfoil = Airfoil(self.state[:, 0], self.state[:, 1])
-        self.states = np.zeros((env_batch_size, 32))
-        # 초기 상태 설정 등
-
-        self.env_batch_size = env_batch_size
 
     def reset(self):
         self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
@@ -38,23 +20,17 @@ class CustomAirfoilEnv:
         return self.get_state()
 
     def step(self, action):
-        action = action.squeeze()
-        # 입력으로 0 ~ 1 사이를 받기 때문에 scaling 해야함
-        action[0] = action[0] * 0.8
-        action[1] = action[1] * 0.2
-
         self.circles.append(((action[0], 0), action[1]))  # add circle
         new_airfoil_points = self.get_airfoil_points(self.circles)
         self.xfoil.airfoil = Airfoil(new_airfoil_points[:, 0], new_airfoil_points[:, 1])
-        cl, cd, cm, cp = self.xfoil.a(5)
+        cl, cd, cm, cp = self.xfoil.a(5)    # angle of attack is 5 degrees
 
-        reward = cl / cd
+        reward = cl / (cd + 1e-5)
 
-        if reward == 0:
+        if reward == 0 or np.isnan(reward):
             reward = -1
 
-        # 다음 상태를 결정합니다. 실제 프로젝트에서는 변경된 에어포일 형상 등을 상태로 사용할 수 있습니다.
-        next_state = self.get_state()
+        next_state = new_airfoil_points
         self.state = next_state
 
         return next_state, reward
@@ -64,13 +40,8 @@ class CustomAirfoilEnv:
 
     def generate_all_circle_points(self, circles, num_points=100):
         """
-        여러 원들에 대한 점들을 생성하고 합칩니다.
-
-        :param circles: 각 원의 (중심, 반지름) 튜플을 포함하는 리스트입니다.
-        :param num_points: 각 원을 대표하는 점의 수입니다 (기본값: 100).
-        :return: 생성된 모든 원들의 점들을 합친 numpy 배열입니다.
+        Generate all points of circles.
         """
-
         def generate_circle_points(center, radius, num_points=100):
             return np.array(
                 [
@@ -81,8 +52,6 @@ class CustomAirfoilEnv:
                     for x in range(num_points)
                 ]
             )
-
-        # 모든 원들의 점들을 생성하고 합칩니다.
         all_points = np.concatenate(
             [
                 generate_circle_points(center, radius, num_points)
@@ -91,6 +60,60 @@ class CustomAirfoilEnv:
         )
 
         return all_points
+
+
+    def get_airfoil_points(self, circles, N=100, plot=False):
+        """
+        Generate airfoil points using linear interpolation of convex hull points.
+        """
+        all_points = self.generate_all_circle_points(circles)   
+        hull = ConvexHull(all_points)
+        hull_points = all_points[hull.vertices]
+        interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
+
+        if plot:
+            # plt.figure(figsize=(10, 5))
+            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
+            plt.gca().set_aspect("equal")
+            plt.plot(
+                np.array(hull_points[:, 0]),
+                np.array(hull_points[:, 1]),
+                "o-",
+                label="Hull Points",
+            )
+            plt.plot(
+                np.array(interpolated_points[:, 0]),
+                np.array(interpolated_points[:, 1]),
+                ".r",
+                label="Interpolated Points",
+            )
+            plt.legend()
+            plt.xlabel("X")
+            plt.ylabel("Y")
+            plt.title("Linear Interpolation of Convex Hull Points")
+            plt.show()
+        else:
+            # plt.figure(figsize=(10, 5))
+            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
+            plt.gca().set_aspect("equal")
+            plt.plot(
+                np.array(hull_points[:, 0]),
+                np.array(hull_points[:, 1]),
+                "o-",
+                label="Hull Points",
+            )
+            plt.plot(
+                np.array(interpolated_points[:, 0]),
+                np.array(interpolated_points[:, 1]),
+                ".r",
+                label="Interpolated Points",
+            )
+            plt.legend()
+            plt.xlabel("X")
+            plt.ylabel("Y")
+            plt.title("Linear Interpolation of Convex Hull Points")
+            plt.savefig('airfoil.png')
+        return interpolated_points
 
     def interpolate_linear_functions(self, hull_points, N=100):
         x_min = np.min(hull_points[:, 0])
@@ -143,7 +166,7 @@ class CustomAirfoilEnv:
             )
 
         upper_x_values = np.flip(upper_x_values)  # x 좌표를 다시 뒤집습니다.
-        upper_y_values = np.flip(upper_y_values)
+        upper_y_values = np.flip(upper_y_values) 
         # LOWER
         lower_hull_points = hull_points[hull_points[:, 1] <= 0]
 
@@ -179,52 +202,5 @@ class CustomAirfoilEnv:
         values = np.vstack((x_values, y_values)).T
 
         return values
-
-    def get_airfoil_points(self, circles, N=100, plot=False):
-        all_points = self.generate_all_circle_points(circles)
-        hull = ConvexHull(all_points)
-        hull_points = all_points[hull.vertices]
-        interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
-        if plot:
-            # plt.figure(figsize=(10, 5))
-            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
-            plt.gca().set_aspect("equal")
-            plt.plot(
-                np.array(hull_points[:, 0]),
-                np.array(hull_points[:, 1]),
-                "o-",
-                label="Hull Points",
-            )
-            plt.plot(
-                np.array(interpolated_points[:, 0]),
-                np.array(interpolated_points[:, 1]),
-                ".r",
-                label="Interpolated Points",
-            )
-            plt.legend()
-            plt.xlabel("X")
-            plt.ylabel("Y")
-            plt.title("Linear Interpolation of Convex Hull Points")
-            plt.show()
-        else:
-            # plt.figure(figsize=(10, 5))
-            # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
-            plt.gca().set_aspect("equal")
-            plt.plot(
-                np.array(hull_points[:, 0]),
-                np.array(hull_points[:, 1]),
-                "o-",
-                label="Hull Points",
-            )
-            plt.plot(
-                np.array(interpolated_points[:, 0]),
-                np.array(interpolated_points[:, 1]),
-                ".r",
-                label="Interpolated Points",
-            )
-            plt.legend()
-            plt.xlabel("X")
-            plt.ylabel("Y")
-            plt.title("Linear Interpolation of Convex Hull Points")
-            plt.savefig('airfoil.png')
-        return interpolated_points
+def make_env():
+    return CustomAirfoilEnv()
