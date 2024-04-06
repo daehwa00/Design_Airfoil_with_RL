@@ -5,20 +5,19 @@ import torch.nn.functional as F
 class AirfoilCNN(nn.Module):
     def __init__(self):
         super(AirfoilCNN, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=2, out_channels=32, kernel_size=5, padding=1)
-        self.conv2 = nn.Conv1d(
-            in_channels=32, out_channels=64, kernel_size=5, padding=1
-        )
-        self.pool = nn.MaxPool1d(kernel_size=2, stride=2)
-        self.fc1 = nn.Linear(64 * 48, 64)  # 입력 길이가 200으로 가정
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=2)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
+        self.fc = nn.Linear(64 * 32 * 63, 64)
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))  # 첫 번째 컨볼루션 및 풀링
-        x = self.pool(F.relu(self.conv2(x)))  # 두 번째 컨볼루션 및 풀링
-        x = x.view(-1, 64 * 48)  # Flatten
-        x = F.relu(self.fc1(x))
+        x = x.unsqueeze(1)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc(x))
         return x
-
 
 class Actor(nn.Module):
     def __init__(self, n_action):

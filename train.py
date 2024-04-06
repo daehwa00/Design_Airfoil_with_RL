@@ -119,12 +119,12 @@ class Train:
             tensor_manager = TensorManager(
                 env_num=1,
                 horizon=self.horizon,
-                state_shape=(2, 200),
+                state_shape=(250, 500),
                 action_dim=2,
                 device=self.device,
             )
             states = self.env.reset()
-            states = torch.tensor(states, dtype=torch.float32).unsqueeze(0).permute(0,2,1).to(self.device)
+            states = torch.tensor(states, dtype=torch.float32).to(self.device)
             # 1 episode (data collection)
             for t in range(self.horizon):
                 # Actor
@@ -135,7 +135,7 @@ class Train:
 
                 # Critic
                 value = self.agent.get_value(states, use_grad=False)
-                next_states, rewards = self.env.step(scaled_actions)
+                next_states, rewards = self.env.step(scaled_actions, t=t)
 
                 tensor_manager.update_tensors(
                     states,
@@ -147,7 +147,7 @@ class Train:
                 )
                 
 
-                states = torch.tensor(next_states, dtype=torch.float32).unsqueeze(0).permute(0,2,1).to(self.device)
+                states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
             
             next_value = self.agent.get_value(states, use_grad=False)
             tensor_manager.values_tensor[:, -1] = next_value.squeeze()
@@ -156,7 +156,7 @@ class Train:
             tensor_manager.advantages_tensor = advs
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
-            eval_rewards = torch.sum(tensor_manager.rewards_tensor)
+            eval_rewards = tensor_manager.rewards_tensor[0, -1]
 
             self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
 
