@@ -34,7 +34,8 @@ class Train:
         self,
         tensor_manager,
     ):
-        actor_loss, critic_loss = 0, 0
+        total_actor_loss, total_critic_loss = 0, 0
+        total_mini_batches = 0
         returns = tensor_manager.advantages_tensor + tensor_manager.values_tensor[:,:-1]
         for epoch in range(self.epochs):
             for (
@@ -61,26 +62,28 @@ class Train:
                     old_value.squeeze(),
                     old_log_prob.squeeze(),
                 )
-                # 업데이트된 숨겨진 상태를 사용하여 critic 및 actor 업데이트
                 value = self.agent.get_value(state, use_grad=True)
-
                 critic_loss = (return_ - value).pow(2).mean()
 
                 new_dist = self.agent.choose_dists(state, use_grad=True)
                 new_log_prob = new_dist.log_prob(action).sum(dim=1)
                 ratio = (new_log_prob - old_log_prob).exp()
 
-                actor_loss_temp = self.compute_actor_loss(ratio, adv)
+                actor_loss = self.compute_actor_loss(ratio, adv)
 
                 entropy_loss = new_dist.entropy().mean()
 
-                actor_loss_temp += -0.03 * entropy_loss
-                actor_loss += actor_loss_temp / self.mini_batch_size
-                critic_loss += critic_loss / self.mini_batch_size
+                actor_loss += -0.03 * entropy_loss
+                total_actor_loss += actor_loss.item()
+                total_critic_loss += critic_loss.item()
+                total_mini_batches += 1
 
-                self.agent.optimize(actor_loss_temp, critic_loss)
+                self.agent.optimize(actor_loss, critic_loss)
+            
+            avg_actor_loss = total_actor_loss / total_mini_batches
+            avg_critic_loss = total_critic_loss / total_mini_batches
 
-        return actor_loss, critic_loss
+        return avg_actor_loss, avg_critic_loss
 
     
 
@@ -127,7 +130,7 @@ class Train:
                 # Actor
                 dists = self.agent.choose_dists(states, use_grad=False)
                 actions = self.agent.choose_actions(dists)
-                scaled_actions = self.agent.scale_actions(actions).squeeze()
+                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()
                 log_prob = dists.log_prob(actions).sum(dim=1)
 
                 # Critic
@@ -155,7 +158,7 @@ class Train:
             actor_loss, critic_loss = self.train(tensor_manager)
             eval_rewards = torch.sum(tensor_manager.rewards_tensor)
 
-            self.print_logs(iteration, actor_loss.detach().numpy(), critic_loss.detach().numpy(), eval_rewards, t)
+            self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
 
     def choose_mini_batch(
         self,
@@ -223,11 +226,11 @@ class Train:
         axs[1, 1].set_title("Critic Loss")
 
         for ax in axs.flat:
-            ax.set(xlabel="Iteration", ylabel="Value")
-            ax.label_outer()
+            ax.set_xlabel("Iteration")  # 모든 서브플롯에 x축 레이블 설정
+            ax.set_ylabel("Value")      # 모든 서브플롯에 y축 레이블 설정
             ax.legend(loc="best")
 
-        fig.subplots_adjust(hspace=0.1, wspace=0.1)
+        fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
         plt.savefig(f"results/results_graphs.png")
         plt.close()

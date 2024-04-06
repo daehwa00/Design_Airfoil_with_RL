@@ -78,7 +78,7 @@ class CustomAirfoilEnv:
         interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
 
         if plot:
-            # plt.figure(figsize=(10, 5))
+            plt.figure(figsize=(10, 5))
             # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
             plt.gca().set_aspect("equal")
             plt.plot(
@@ -99,7 +99,7 @@ class CustomAirfoilEnv:
             plt.title("Linear Interpolation of Convex Hull Points")
             plt.show()
         else:
-            # plt.figure(figsize=(10, 5))
+            plt.figure(figsize=(10, 5))
             # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
             plt.gca().set_aspect("equal")
             plt.plot(
