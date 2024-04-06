@@ -9,8 +9,8 @@ class CustomAirfoilEnv:
         self.xfoil = XFoil()
         self.xfoil.Re = 1e6
         self.xfoil.max_iter = 100  # 최대 반복 횟수
-        self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
-        self.state = self.get_airfoil_points(self.circles)  # state는 점을 제공
+        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]
+        self.state = self.get_airfoil_points(self.circles)  # state는 점을 제공 shape=(N, 2)
         self.xfoil.airfoil = Airfoil(self.state[:, 0], self.state[:, 1])
 
     def reset(self):
@@ -24,8 +24,13 @@ class CustomAirfoilEnv:
         new_airfoil_points = self.get_airfoil_points(self.circles)
         self.xfoil.airfoil = Airfoil(new_airfoil_points[:, 0], new_airfoil_points[:, 1])
         cl, cd, cm, cp = self.xfoil.a(5)    # angle of attack is 5 degrees
-
-        reward = cl / (cd + 1e-5)
+        """
+        Cl : 양력 계누는 음수일 수 있다.
+        자동차 레이싱에서는 의도적으로 음수가 되어 차량을 도로에 더 단단히 밀착시킨다.
+        Cd : 유체의 흐름에 대항하는 물체의 저항
+        """
+        # reward = cl / (cd + 1e-5)
+        reward = cl
 
         if reward == 0 or np.isnan(reward):
             reward = -1
@@ -66,7 +71,8 @@ class CustomAirfoilEnv:
         """
         Generate airfoil points using linear interpolation of convex hull points.
         """
-        all_points = self.generate_all_circle_points(circles)   
+        all_points = self.generate_all_circle_points(circles)
+        all_points = all_points[all_points[:, 0] <= 1]
         hull = ConvexHull(all_points)
         hull_points = all_points[hull.vertices]
         interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
@@ -82,8 +88,8 @@ class CustomAirfoilEnv:
                 label="Hull Points",
             )
             plt.plot(
-                np.array(interpolated_points[:, 0]),
-                np.array(interpolated_points[:, 1]),
+                np.array(interpolated_points[0]),
+                np.array(interpolated_points[1]),
                 ".r",
                 label="Interpolated Points",
             )
@@ -103,8 +109,8 @@ class CustomAirfoilEnv:
                 label="Hull Points",
             )
             plt.plot(
-                np.array(interpolated_points[:, 0]),
-                np.array(interpolated_points[:, 1]),
+                np.array(interpolated_points[0]),
+                np.array(interpolated_points[1]),
                 ".r",
                 label="Interpolated Points",
             )
@@ -113,7 +119,7 @@ class CustomAirfoilEnv:
             plt.ylabel("Y")
             plt.title("Linear Interpolation of Convex Hull Points")
             plt.savefig('airfoil.png')
-        return interpolated_points
+        return interpolated_points.T
 
     def interpolate_linear_functions(self, hull_points, N=100):
         x_min = np.min(hull_points[:, 0])
@@ -199,7 +205,7 @@ class CustomAirfoilEnv:
 
         x_values = np.concatenate((upper_x_values, lower_x_values))
         y_values = np.concatenate((upper_y_values, lower_y_values))
-        values = np.vstack((x_values, y_values)).T
+        values = np.vstack((x_values, y_values))
 
         return values
 def make_env():

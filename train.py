@@ -53,7 +53,14 @@ class Train:
                 tensor_manager.values_tensor,
                 tensor_manager.log_probs_tensor,
             ):
-
+                state, action, return_, adv, old_value, old_log_prob = (
+                    state.squeeze(),
+                    action.squeeze(),
+                    return_.squeeze(),
+                    adv.squeeze(),
+                    old_value.squeeze(),
+                    old_log_prob.squeeze(),
+                )
                 # 업데이트된 숨겨진 상태를 사용하여 critic 및 actor 업데이트
                 value = self.agent.get_value(state, use_grad=True)
 
@@ -68,8 +75,8 @@ class Train:
                 entropy_loss = new_dist.entropy().mean()
 
                 actor_loss_temp += -0.03 * entropy_loss
-                actor_loss += actor_loss_temp / len(self.choose_mini_batch)
-                critic_loss += critic_loss / len(self.choose_mini_batch)
+                actor_loss += actor_loss_temp / self.mini_batch_size
+                critic_loss += critic_loss / self.mini_batch_size
 
                 self.agent.optimize(actor_loss_temp, critic_loss)
 
@@ -114,7 +121,7 @@ class Train:
                 device=self.device,
             )
             states = self.env.reset()
-            states = torch.tensor(states, dtype=torch.float32).unsqueeze(0).permute(0, 2, 1).to(self.device)
+            states = torch.tensor(states, dtype=torch.float32).unsqueeze(0).permute(0,2,1).to(self.device)
             # 1 episode (data collection)
             for t in range(self.horizon):
                 # Actor
@@ -137,7 +144,7 @@ class Train:
                 )
                 
 
-                states = torch.tensor(next_states, dtype=torch.float32).unsqueeze(0).permute(0, 2, 1).to(self.device)
+                states = torch.tensor(next_states, dtype=torch.float32).unsqueeze(0).permute(0,2,1).to(self.device)
             
             next_value = self.agent.get_value(states, use_grad=False)
             tensor_manager.values_tensor[:, -1] = next_value.squeeze()
@@ -148,7 +155,7 @@ class Train:
             actor_loss, critic_loss = self.train(tensor_manager)
             eval_rewards = torch.sum(tensor_manager.rewards_tensor)
 
-            self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
+            self.print_logs(iteration, actor_loss.detach().numpy(), critic_loss.detach().numpy(), eval_rewards, t)
 
     def choose_mini_batch(
         self,
@@ -160,19 +167,19 @@ class Train:
         values,
         log_probs,
     ):
-        full_batch_size = states.size(0)
-        for _ in range(full_batch_size // mini_batch_size):
+
+        for _ in range(self.horizon // mini_batch_size):
             # 무작위로 mini_batch_size 개의 인덱스를 선택
-            indices = torch.randperm(full_batch_size)[:mini_batch_size].to(
+            indices = torch.randperm(self.horizon)[:mini_batch_size].to(
                 states.device
             )
             yield (
-                states[indices],
-                actions[indices],
-                returns[indices],
-                advs[indices],
-                values[indices],
-                log_probs[indices],
+                states[:, indices],
+                actions[:, indices],
+                returns[:, indices],
+                advs[:, indices],
+                values[:, indices],
+                log_probs[:, indices],
             )
 
     def print_logs(self, iteration, actor_loss, critic_loss, eval_rewards, steps):
@@ -185,7 +192,7 @@ class Train:
         current_actor_lr = self.agent.actor_optimizer.param_groups[0]["lr"]
         current_critic_lr = self.agent.critic_optimizer.param_groups[0]["lr"]
 
-        self.steps_history.append(steps )
+        self.steps_history.append(steps)
         self.rewards_history.append(running_reward.item())
         self.actor_loss_history.append(actor_loss)
         self.critic_loss_history.append(critic_loss)

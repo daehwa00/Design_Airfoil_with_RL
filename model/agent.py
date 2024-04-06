@@ -56,8 +56,8 @@ class Agent(nn.Module):
         actions = nn.Sigmoid()(actions)
         scaled_actions = torch.zeros_like(actions)
         # x 값을 0~0.8로 스케일링
-        scaled_actions[:, :0] = actions[:, :0] * 0.8
+        scaled_actions[0][0] = actions[0][0] * 0.8
         # r 값을 0~0.2로 스케일링
-        scaled_actions[:, 1] = actions[:, 1] * 0.2
+        scaled_actions[0][1] = actions[0][1] * 0.2
 
         return scaled_actions

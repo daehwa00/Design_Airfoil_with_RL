@@ -6,7 +6,7 @@ from utils import set_seed
 
 ENV_NAME = "CustomAirfoilEnv"
 Number_of_points = 100
-epochs = 50
+epochs = 10
 T = 20
 clip_range = 0.2
 beta = 0.01  # 엔트로피 항에 대한 가중치
