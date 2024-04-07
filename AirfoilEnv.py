@@ -16,12 +16,12 @@ class CustomAirfoilEnv:
         self.xfoil = XFoil()
         self.xfoil.Re = 1e6
         self.xfoil.max_iter = 100  # 최대 반복 횟수
-        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]
+        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]    # [((0, 0), 0.05), ((1, 0), 0.002)]
         self.points, self.state = self.get_airfoil(self.circles)  # state는 점을 제공 shape=(N, 2)
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
-        self.circles = [((0, 0), 0.05), ((1, 0), 0.001)]
+        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]
         self.points, self.state = self.get_airfoil(self.circles)
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
         return self.get_state()

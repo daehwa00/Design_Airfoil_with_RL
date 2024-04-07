@@ -71,9 +71,9 @@ class Train:
 
                 actor_loss = self.compute_actor_loss(ratio, adv)
 
-                entropy_loss = new_dist.entropy().mean()
+                #entropy_loss = new_dist.entropy().mean()
 
-                actor_loss += -0.03 * entropy_loss
+                #actor_loss += -0.03 * entropy_loss
                 total_actor_loss += actor_loss.item()
                 total_critic_loss += critic_loss.item()
                 total_mini_batches += 1
@@ -87,7 +87,7 @@ class Train:
 
     
 
-    def get_gae(self, tensor_manager, gamma=1, lam=0.95):
+    def get_gae(self, tensor_manager, gamma=0.9, lam=0.95):
         rewards = tensor_manager.rewards_tensor
         values = tensor_manager.values_tensor
         num_env, horizon = rewards.shape
