@@ -5,7 +5,7 @@ from utils import set_seed
 
 
 ENV_NAME = "CustomAirfoilEnv"
-Number_of_points = 100
+num_points = 80
 epochs = 10
 T = 20
 clip_range = 0.2
@@ -18,7 +18,7 @@ learning_rate = 1e-4
 
 if __name__ == "__main__":
     set_seed(42)  # 시드 고정
-    env = make_env(Number_of_points=Number_of_points)
+    env = make_env(num_points=num_points)
     agent = Agent(n_actions=2, lr=learning_rate)
     trainer = Train(
         env=env,

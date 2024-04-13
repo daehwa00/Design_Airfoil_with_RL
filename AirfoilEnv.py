@@ -13,36 +13,33 @@ import torch
 
 
 class CustomAirfoilEnv:
-    def __init__(self):
+    def __init__(self, num_points=80):
         self.xfoil = XFoil()
         self.xfoil.Re = 1e6
         self.xfoil.max_iter = 100  # 최대 반복 횟수
-        self.circles = [
-            ((0, 0), 0.05),
+
+        self.num_points = num_points
+        self._initial_circles = [
+            ((0, 0), 0.002),
             ((1, 0), 0.002),
-        ]  # [((0, 0), 0.05), ((1, 0), 0.002)]
+        ]
+        self.circles = self._initial_circles
         self.points, self.state = self.get_airfoil(
             self.circles
         )  # state는 점을 제공 shape=(N, 2)
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
-        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]
+        self.circles = self._initial_circles
         self.points, self.state = self.get_airfoil(self.circles)
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
         return self.get_state()
 
     def step(self, action, t=None):
-        self.circles.append(((action[0], 0), action[1]))  # add circle
+        self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
         self.xfoil.airfoil = Airfoil(points[:, 0], points[:, 1])
         cl, cd, cm, cp = self.xfoil.a(5)  # angle of attack is 5 degrees
-        """
-        Cl : 양력 계누는 음수일 수 있다.
-        자동차 레이싱에서는 의도적으로 음수가 되어 차량을 도로에 더 단단히 밀착시킨다.
-        Cd : 유체의 흐름에 대항하는 물체의 저항
-        """
-        # reward = cl / (cd + 1e-5)
         reward = cl
 
         if reward == 0 or np.isnan(reward):
@@ -54,42 +51,44 @@ class CustomAirfoilEnv:
         return next_state, reward
 
     def get_state(self):
+        """
+        현재 상태(Airfoil)을 반환합니다.
+        """
         return self.state
 
-    def generate_all_circle_points(self, circles, num_points=100):
+    def generate_all_circle_points(self, circles):
         """
-        Generate all points of circles.
+        원의 중심과 반지름을 사용하여 모든 점을 생성합니다.
         """
 
-        def generate_circle_points(center, radius, num_points=100):
+        def generate_circle_points(center, radius):
             return np.array(
                 [
                     [
-                        center[0] + np.cos(2 * np.pi / num_points * x) * radius,
-                        center[1] + np.sin(2 * np.pi / num_points * x) * radius,
+                        center[0] + np.cos(2 * np.pi / self.num_points * x) * radius,
+                        center[1] + np.sin(2 * np.pi / self.num_points * x) * radius,
                     ]
-                    for x in range(num_points)
+                    for x in range(self.num_points)
                 ]
             )
 
         all_points = np.concatenate(
-            [
-                generate_circle_points(center, radius, num_points)
-                for center, radius in circles
-            ]
+            [generate_circle_points(center, radius) for center, radius in circles]
         )
 
         return all_points
 
-    def get_airfoil(self, circles, N=100, plot=False, t=None):
+    def get_airfoil(self, circles, t=None):
         """
-        Generate airfoil points using linear interpolation of convex hull points.
+        주어진 원들을 사용하여 Airfoil 점을 생성
         """
         all_points = self.generate_all_circle_points(circles)
-        all_points = all_points[all_points[:, 0] <= 1]
+        all_points = all_points[
+            all_points[:, 0] <= 1
+        ]  # x 좌표가 1보다 작거나 같은 점만 유지
         hull = ConvexHull(all_points)
         hull_points = all_points[hull.vertices]
-        interpolated_points = self.interpolate_linear_functions(hull_points, N=N)
+        interpolated_points = self.interpolate_linear_functions(hull_points)
 
         plt.figure(figsize=(10, 5))
         # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
@@ -122,12 +121,12 @@ class CustomAirfoilEnv:
         plt.savefig("airfoil.png")
 
         cs_upper = CubicSpline(
-            np.concatenate(([0], np.flip(interpolated_points[0, :100]))),
-            np.concatenate(([0], np.flip(interpolated_points[1, :100]))),
+            np.concatenate(([0], np.flip(interpolated_points[0, : self.num_points]))),
+            np.concatenate(([0], np.flip(interpolated_points[1, : self.num_points]))),
         )
         cs_lower = CubicSpline(
-            np.concatenate(([0], interpolated_points[0, 100:])),
-            np.concatenate(([0], interpolated_points[1, 100:])),
+            np.concatenate(([0], interpolated_points[0, self.num_points :])),
+            np.concatenate(([0], interpolated_points[1, self.num_points :])),
         )
         x_fine_upper = np.linspace(0, 1, 10000)
         x_fine_lower = np.linspace(0, 1, 10000)
@@ -152,14 +151,17 @@ class CustomAirfoilEnv:
 
         return interpolated_points.T, tensor
 
-    def interpolate_linear_functions(self, hull_points, N=100):
+    def interpolate_linear_functions(self, hull_points):
+        """
+        Convex Hull 점을 사용하여 선형 함수를 보간합니다.
+        """
         x_min = np.min(hull_points[:, 0])
         x_argmin = np.argmin(hull_points[:, 0])
         y_standard = hull_points[x_argmin, 1]
         hull_points -= [x_min, y_standard]
 
-        N_front = int(0.3 * N)
-        N_back = N - N_front
+        N_front = int(0.3 * self.num_points)
+        N_back = self.num_points - N_front
 
         # x 좌표의 최대값으로 모든 x 좌표를 정규화
         x_max = np.max(hull_points[:, 0])
@@ -187,10 +189,10 @@ class CustomAirfoilEnv:
         )  # 0 대신 최소값으로 시작
         upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
         upper_x_values = np.concatenate((upper_front_x_values, upper_back_x_values))
-        upper_y_values = np.zeros(N)
+        upper_y_values = np.zeros(self.num_points)
 
         upper_current_segment = 0
-        for i in range(N):
+        for i in range(self.num_points):
             upper_x = upper_x_values[i]
             while (
                 upper_current_segment < len(upper_slopes) - 1
@@ -219,10 +221,10 @@ class CustomAirfoilEnv:
         )  # 0 대신 최소값으로 시작
         lower_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
         lower_x_values = np.concatenate((lower_front_x_values, lower_back_x_values))
-        lower_y_values = np.zeros(N)
+        lower_y_values = np.zeros(self.num_points)
 
         lower_current_segment = 0
-        for i in range(N):
+        for i in range(self.num_points):
             lower_x = lower_x_values[i]
             while (
                 lower_current_segment < len(lower_slopes) - 1
@@ -241,5 +243,5 @@ class CustomAirfoilEnv:
         return values
 
 
-def make_env(Number_of_points=80):
-    return CustomAirfoilEnv(Number_of_points=Number_of_points)
+def make_env(num_points=80):
+    return CustomAirfoilEnv(num_points=num_points)
