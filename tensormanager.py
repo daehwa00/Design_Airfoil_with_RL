@@ -1,5 +1,6 @@
 import torch
 
+
 class TensorManager:
     def __init__(
         self,
@@ -31,7 +32,7 @@ class TensorManager:
 
     def init_tensor(self, shape, requires_grad):
         return torch.zeros(shape, requires_grad=requires_grad).to(self.device)
-    
+
     def update_tensors(
         self,
         states,

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class AirfoilCNN(nn.Module):
     def __init__(self):
         super(AirfoilCNN, self).__init__()
@@ -19,11 +20,14 @@ class AirfoilCNN(nn.Module):
         x = F.relu(self.fc(x))
         return x
 
+
 class Actor(nn.Module):
     def __init__(self, n_action):
         super(Actor, self).__init__()
         self.encoder = AirfoilCNN()  # 상태를 인코딩하는 네트워크
-        self.policy_mean = nn.Sequential(nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, n_action))
+        self.policy_mean = nn.Sequential(
+            nn.Linear(64, 64), nn.ReLU(), nn.Linear(64, n_action)
+        )
         self.policy_std = nn.Parameter(torch.zeros(n_action))
         self._initialize_weights()
 
@@ -42,6 +46,7 @@ class Actor(nn.Module):
                 nn.init.xavier_normal_(m.weight)
                 nn.init.constant_(m.bias, 0)
         nn.init.constant_(self.policy_std, 0.1)
+
 
 class Critic(nn.Module):
     def __init__(self):

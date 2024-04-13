@@ -11,13 +11,19 @@ from PIL import Image
 from torchvision import transforms
 import torch
 
+
 class CustomAirfoilEnv:
     def __init__(self):
         self.xfoil = XFoil()
         self.xfoil.Re = 1e6
         self.xfoil.max_iter = 100  # 최대 반복 횟수
-        self.circles = [((0, 0), 0.05), ((1, 0), 0.002)]    # [((0, 0), 0.05), ((1, 0), 0.002)]
-        self.points, self.state = self.get_airfoil(self.circles)  # state는 점을 제공 shape=(N, 2)
+        self.circles = [
+            ((0, 0), 0.05),
+            ((1, 0), 0.002),
+        ]  # [((0, 0), 0.05), ((1, 0), 0.002)]
+        self.points, self.state = self.get_airfoil(
+            self.circles
+        )  # state는 점을 제공 shape=(N, 2)
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
@@ -30,7 +36,7 @@ class CustomAirfoilEnv:
         self.circles.append(((action[0], 0), action[1]))  # add circle
         points, state = self.get_airfoil(self.circles, t=t)
         self.xfoil.airfoil = Airfoil(points[:, 0], points[:, 1])
-        cl, cd, cm, cp = self.xfoil.a(5)    # angle of attack is 5 degrees
+        cl, cd, cm, cp = self.xfoil.a(5)  # angle of attack is 5 degrees
         """
         Cl : 양력 계누는 음수일 수 있다.
         자동차 레이싱에서는 의도적으로 음수가 되어 차량을 도로에 더 단단히 밀착시킨다.
@@ -54,6 +60,7 @@ class CustomAirfoilEnv:
         """
         Generate all points of circles.
         """
+
         def generate_circle_points(center, radius, num_points=100):
             return np.array(
                 [
@@ -64,6 +71,7 @@ class CustomAirfoilEnv:
                     for x in range(num_points)
                 ]
             )
+
         all_points = np.concatenate(
             [
                 generate_circle_points(center, radius, num_points)
@@ -72,7 +80,6 @@ class CustomAirfoilEnv:
         )
 
         return all_points
-
 
     def get_airfoil(self, circles, N=100, plot=False, t=None):
         """
@@ -100,15 +107,28 @@ class CustomAirfoilEnv:
             label="Interpolated Points",
         )
         if t is not None:  # t가 주어진 경우, 이미지에 텍스트 추가
-            plt.text(0.05, 0.95, f"Image #{t + 1}", transform=plt.gca().transAxes, fontsize=12, verticalalignment='top')
+            plt.text(
+                0.05,
+                0.95,
+                f"Image #{t + 1}",
+                transform=plt.gca().transAxes,
+                fontsize=12,
+                verticalalignment="top",
+            )
         plt.legend()
         plt.xlabel("X")
         plt.ylabel("Y")
         plt.title("Linear Interpolation of Convex Hull Points")
-        plt.savefig('airfoil.png')
+        plt.savefig("airfoil.png")
 
-        cs_upper = CubicSpline(np.concatenate(([0],np.flip(interpolated_points[0,:100]))), np.concatenate(([0],np.flip(interpolated_points[1,:100]))))
-        cs_lower = CubicSpline(np.concatenate(([0],interpolated_points[0,100:])), np.concatenate(([0],interpolated_points[1,100:])))
+        cs_upper = CubicSpline(
+            np.concatenate(([0], np.flip(interpolated_points[0, :100]))),
+            np.concatenate(([0], np.flip(interpolated_points[1, :100]))),
+        )
+        cs_lower = CubicSpline(
+            np.concatenate(([0], interpolated_points[0, 100:])),
+            np.concatenate(([0], interpolated_points[1, 100:])),
+        )
         x_fine_upper = np.linspace(0, 1, 10000)
         x_fine_lower = np.linspace(0, 1, 10000)
 
@@ -116,17 +136,17 @@ class CustomAirfoilEnv:
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.plot(x_fine_upper, cs_upper(x_fine_upper), color='black')
-        ax.plot(x_fine_lower, cs_lower(x_fine_lower), color='black')
-        ax.axis('off')
-        ax.axis('equal')
+        ax.plot(x_fine_upper, cs_upper(x_fine_upper), color="black")
+        ax.plot(x_fine_lower, cs_lower(x_fine_lower), color="black")
+        ax.axis("off")
+        ax.axis("equal")
 
         # 메모리에 이미지 저장
         buf = io.BytesIO()
-        fig.savefig(buf, format='png', dpi=50)
+        fig.savefig(buf, format="png", dpi=50)
         buf.seek(0)
 
-        image = Image.open(buf).convert('L')
+        image = Image.open(buf).convert("L")
         tensor = 1 - transforms.ToTensor()(image)
         buf.close()
 
@@ -183,7 +203,7 @@ class CustomAirfoilEnv:
             )
 
         upper_x_values = np.flip(upper_x_values)  # x 좌표를 다시 뒤집습니다.
-        upper_y_values = np.flip(upper_y_values) 
+        upper_y_values = np.flip(upper_y_values)
         # LOWER
         lower_hull_points = hull_points[hull_points[:, 1] <= 0]
 
@@ -219,5 +239,7 @@ class CustomAirfoilEnv:
         values = np.vstack((x_values, y_values))
 
         return values
-def make_env():
-    return CustomAirfoilEnv()
+
+
+def make_env(Number_of_points=80):
+    return CustomAirfoilEnv(Number_of_points=Number_of_points)
