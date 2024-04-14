@@ -7,7 +7,8 @@ from utils import set_seed
 ENV_NAME = "CustomAirfoilEnv"
 num_points = 80
 epochs = 10
-T = 20
+
+T = 10
 clip_range = 0.2
 beta = 0.01  # 엔트로피 항에 대한 가중치
 mini_batch_size = 10
@@ -27,7 +28,7 @@ if __name__ == "__main__":
         horizon=T,
         epochs=epochs,
         mini_batch_size=mini_batch_size,
-        num_points = num_points,
+        num_points=num_points,
         epsilon=clip_range,
     )
     trainer.step()

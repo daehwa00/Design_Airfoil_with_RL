@@ -23,15 +23,18 @@ class CustomAirfoilEnv:
             ((0, 0), 0.002),
             ((1, 0), 0.002),
         ]
-        self.circles = self._initial_circles
+        # 초기 상태 설정
+        self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
             self.circles
         )  # state는 점을 제공 shape=(N, 2)
+        self.state = torch.zeros(1, 250, 500)  # 이미지 텐서
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
-        self.circles = self._initial_circles
+        self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
+        self.state = torch.zeros(1, 250, 500)  # 이미지 텐서
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
         return self.get_state()
 
@@ -146,8 +149,6 @@ class CustomAirfoilEnv:
         buf.seek(0)
 
         image = Image.open(buf).convert("L")
-        plt.plot()
-        plt.show()
         tensor = 1 - transforms.ToTensor()(image)
         buf.close()
 

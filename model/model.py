@@ -6,13 +6,20 @@ import torch.nn.functional as F
 class AirfoilCNN(nn.Module):
     def __init__(self):
         super(AirfoilCNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2, padding=2)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
+        self.conv1 = nn.Conv2d(
+            1, 16, kernel_size=5, stride=2, padding=2
+        )  # receptive field: 5x5
+        self.conv2 = nn.Conv2d(
+            16, 32, kernel_size=5, stride=2, padding=2
+        )  # receptive field: 9x9
+        self.conv3 = nn.Conv2d(
+            32, 64, kernel_size=3, stride=2, padding=1
+        )  # receptive field: 17x17
         self.fc = nn.Linear(64 * 32 * 63, 64)
 
     def forward(self, x):
-        x = x.unsqueeze(1)
+        if len(x.shape) == 3:
+            x = x.unsqueeze(1)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))

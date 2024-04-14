@@ -26,6 +26,7 @@ class Train:
         self.n_iterations = 100
         self.mini_batch_size = mini_batch_size
         self.start_time = 0
+        self.state = None  # Image Tensor
         self.running_reward = 0
         self.steps_history = []
         self.rewards_history = []
@@ -67,6 +68,7 @@ class Train:
                     old_value.squeeze(),
                     old_log_prob.squeeze(),
                 )
+                state = state.unsqueeze(1)
                 value = self.agent.get_value(state, use_grad=True)
                 critic_loss = (return_ - value).pow(2).mean()
 
@@ -78,7 +80,6 @@ class Train:
 
                 # entropy_loss = new_dist.entropy().mean()
 
-                # actor_loss += -0.03 * entropy_loss
                 total_actor_loss += actor_loss.item()
                 total_critic_loss += critic_loss.item()
                 total_mini_batches += 1
@@ -121,7 +122,7 @@ class Train:
             tensor_manager = TensorManager(
                 env_num=1,
                 horizon=self.horizon,
-                state_shape=(250, 250),
+                state_shape=(250, 500),
                 action_dim=2,
                 device=self.device,
             )
@@ -133,7 +134,9 @@ class Train:
                 # Actor
                 dists = self.agent.choose_dists(states, use_grad=False)
                 actions = self.agent.choose_actions(dists)
-                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()    # x -> 0~0.8, r -> 0~0.2
+                scaled_actions = (
+                    self.agent.scale_actions(actions).numpy().squeeze()
+                )  # x -> 0~0.8, r -> 0~0.2
                 log_prob = dists.log_prob(actions).sum(dim=1)
 
                 # Critic
