@@ -27,6 +27,7 @@ if __name__ == "__main__":
         horizon=T,
         epochs=epochs,
         mini_batch_size=mini_batch_size,
+        num_points = num_points,
         epsilon=clip_range,
     )
     trainer.step()

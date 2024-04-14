@@ -146,6 +146,8 @@ class CustomAirfoilEnv:
         buf.seek(0)
 
         image = Image.open(buf).convert("L")
+        plt.plot()
+        plt.show()
         tensor = 1 - transforms.ToTensor()(image)
         buf.close()
 

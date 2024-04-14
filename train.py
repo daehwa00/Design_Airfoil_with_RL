@@ -12,6 +12,7 @@ class Train:
         agent,
         epochs,
         mini_batch_size,
+        num_points,
         epsilon,
         horizon,
     ):
@@ -21,6 +22,7 @@ class Train:
         self.epsilon = epsilon
         self.horizon = horizon
         self.epochs = epochs
+        self.num_points = num_points
         self.n_iterations = 100
         self.mini_batch_size = mini_batch_size
         self.start_time = 0
@@ -119,18 +121,19 @@ class Train:
             tensor_manager = TensorManager(
                 env_num=1,
                 horizon=self.horizon,
-                state_shape=(250, 500),
+                state_shape=(250, 250),
                 action_dim=2,
                 device=self.device,
             )
             states = self.env.reset()
             states = torch.tensor(states, dtype=torch.float32).to(self.device)
+
             # 1 episode (data collection)
             for t in range(self.horizon):
                 # Actor
                 dists = self.agent.choose_dists(states, use_grad=False)
                 actions = self.agent.choose_actions(dists)
-                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()
+                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()    # x -> 0~0.8, r -> 0~0.2
                 log_prob = dists.log_prob(actions).sum(dim=1)
 
                 # Critic
