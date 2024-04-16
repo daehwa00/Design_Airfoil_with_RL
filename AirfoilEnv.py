@@ -160,32 +160,6 @@ class CustomAirfoilEnv:
 
         return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
 
-    def compute_sdf(tensor):
-        """
-        주어진 텐서를 사용하여 나머지 공간을 채우는 SDF를 계산합니다.
-        
-        :param tensor: 에어포일 곡선의 정보를 담은 텐서
-        :param resolution: 출력 SDF의 해상도 (width, height)
-        :return: SDF 값을 담은 2D 배열
-        """
-        width, height = tensor.shape[2], tensor.shape[1]
-        # 텐서에서 좌표를 추출 (여기서는 tensor가 0과 1로 구성된 이진 이미지라고 가정)
-        y_indices, x_indices = torch.where(tensor[0] > 0.5)  # 0.5 이상을 에어포일 곡선으로 가정
-        points = torch.stack((x_indices.float(), y_indices.float()), dim=1)
-        
-        # 출력 SDF 초기화
-        sdf = torch.full((width, height), float('inf'))
-        
-        # 각 점에 대해 에어포일 곡선까지의 최단 거리 계산
-        for y in range(width):
-            for x in range(height):
-                min_dist = torch.min(torch.norm(points - torch.tensor([x, y]), dim=1))
-                sdf[y, x] = min_dist
-        
-        # 여기서 추가적으로, 곡선 내부와 외부를 구분하여 내부는 음수로 설정할 수 있습니다.
-        # 이를 위해선 추가적인 내부/외부 판별 로직이 필요합니다.
-        
-        return sdf.numpy()
 
     def interpolate_linear_functions(self, hull_points):
         """
