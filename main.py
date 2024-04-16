@@ -9,8 +9,8 @@ num_points = 80
 epochs = 10
 
 T = 10
-clip_range = 0.2
-beta = 0.01  # 엔트로피 항에 대한 가중치
+clip_range = 0.1
+beta = 0.1  # 엔트로피 항에 대한 가중치
 mini_batch_size = 10
 batch_size = 16
 processes = batch_size
@@ -29,6 +29,7 @@ if __name__ == "__main__":
         epochs=epochs,
         mini_batch_size=mini_batch_size,
         num_points=num_points,
+        beta=beta,
         epsilon=clip_range,
     )
     trainer.step()

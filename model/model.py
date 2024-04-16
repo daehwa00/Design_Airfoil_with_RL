@@ -6,16 +6,12 @@ import torch.nn.functional as F
 class AirfoilCNN(nn.Module):
     def __init__(self):
         super(AirfoilCNN, self).__init__()
-        self.conv1 = nn.Conv2d(
-            1, 16, kernel_size=5, stride=2, padding=2
-        )  # receptive field: 5x5
-        self.conv2 = nn.Conv2d(
-            16, 32, kernel_size=5, stride=2, padding=2
-        )  # receptive field: 9x9
-        self.conv3 = nn.Conv2d(
-            32, 64, kernel_size=3, stride=2, padding=1
-        )  # receptive field: 17x17
-        self.fc = nn.Linear(64 * 32 * 63, 64)
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=7, stride=2, padding=3)  # receptive field: 7x7
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=7, stride=2, padding=3) # receptive field: 17x17
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=5, stride=2, padding=2) # receptive field: 29x29
+        self.conv4 = nn.Conv2d(64, 128, kernel_size=5, stride=2, padding=2) # receptive field: 45x45
+        self.fc1 = nn.Linear(128 * 16 * 32, 128)  # 최종 컨볼루션 레이어의 출력 크기를 바탕으로 계산된 값
+        self.fc2 = nn.Linear(128, 64)  # 추가적인 FC 레이어
 
     def forward(self, x):
         if len(x.shape) == 3:
@@ -23,8 +19,10 @@ class AirfoilCNN(nn.Module):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
+        x = F.relu(self.conv4(x))
         x = x.view(x.size(0), -1)
-        x = F.relu(self.fc(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         return x
 
 

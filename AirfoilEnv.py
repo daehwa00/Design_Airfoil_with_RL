@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 from PIL import Image
 from torchvision import transforms
 import torch
+import cv2
 
 
 class CustomAirfoilEnv:
@@ -42,8 +43,8 @@ class CustomAirfoilEnv:
         self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
         self.xfoil.airfoil = Airfoil(points[:, 0], points[:, 1])
-        cl, cd, cm, cp = self.xfoil.a(5)  # angle of attack is 5 degrees
-        reward = cl
+        cl, cd, cm, cp = self.xfoil.a(2)  # angle of attack is 5 degrees
+        reward = cl * 100  # reward is lift coefficient
 
         if reward == 0 or np.isnan(reward):
             reward = -1
@@ -123,6 +124,7 @@ class CustomAirfoilEnv:
         plt.title("Linear Interpolation of Convex Hull Points")
         plt.savefig("airfoil.png")
 
+        # Cubic Spline을 사용하여 보간된 점을 연결
         cs_upper = CubicSpline(
             np.concatenate(([0], np.flip(interpolated_points[0, : self.num_points]))),
             np.concatenate(([0], np.flip(interpolated_points[1, : self.num_points]))),
@@ -134,12 +136,12 @@ class CustomAirfoilEnv:
         x_fine_upper = np.linspace(0, 1, 10000)
         x_fine_lower = np.linspace(0, 1, 10000)
 
-        # 그래프 그리기
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
         ax.plot(x_fine_upper, cs_upper(x_fine_upper), color="black")
         ax.plot(x_fine_lower, cs_lower(x_fine_lower), color="black")
+        ax.fill_between(x_fine_upper, cs_upper(x_fine_upper), cs_lower(x_fine_lower), color="black") 
         ax.axis("off")
         ax.axis("equal")
 
@@ -149,10 +151,41 @@ class CustomAirfoilEnv:
         buf.seek(0)
 
         image = Image.open(buf).convert("L")
-        tensor = 1 - transforms.ToTensor()(image)
-        buf.close()
+        image.save("airfoil_image.png")
+        _, binary_img = cv2.threshold(np.array(image), 127, 255, cv2.THRESH_BINARY) # 이진 이미지로 변환
+        dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)  
+        dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
+        sdf = dist_inside - dist_outside
+        sdf = sdf / np.max(np.abs(sdf))
 
-        return interpolated_points.T, tensor
+        return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
+
+    def compute_sdf(tensor):
+        """
+        주어진 텐서를 사용하여 나머지 공간을 채우는 SDF를 계산합니다.
+        
+        :param tensor: 에어포일 곡선의 정보를 담은 텐서
+        :param resolution: 출력 SDF의 해상도 (width, height)
+        :return: SDF 값을 담은 2D 배열
+        """
+        width, height = tensor.shape[2], tensor.shape[1]
+        # 텐서에서 좌표를 추출 (여기서는 tensor가 0과 1로 구성된 이진 이미지라고 가정)
+        y_indices, x_indices = torch.where(tensor[0] > 0.5)  # 0.5 이상을 에어포일 곡선으로 가정
+        points = torch.stack((x_indices.float(), y_indices.float()), dim=1)
+        
+        # 출력 SDF 초기화
+        sdf = torch.full((width, height), float('inf'))
+        
+        # 각 점에 대해 에어포일 곡선까지의 최단 거리 계산
+        for y in range(width):
+            for x in range(height):
+                min_dist = torch.min(torch.norm(points - torch.tensor([x, y]), dim=1))
+                sdf[y, x] = min_dist
+        
+        # 여기서 추가적으로, 곡선 내부와 외부를 구분하여 내부는 음수로 설정할 수 있습니다.
+        # 이를 위해선 추가적인 내부/외부 판별 로직이 필요합니다.
+        
+        return sdf.numpy()
 
     def interpolate_linear_functions(self, hull_points):
         """

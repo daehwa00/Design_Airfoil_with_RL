@@ -15,6 +15,7 @@ class Train:
         num_points,
         epsilon,
         horizon,
+        beta=0.01,
     ):
         self.env = env
         self.env_name = env_name
@@ -28,6 +29,7 @@ class Train:
         self.start_time = 0
         self.state = None  # Image Tensor
         self.running_reward = 0
+        self.beta = beta
         self.steps_history = []
         self.rewards_history = []
         self.actor_loss_history = []
@@ -78,7 +80,8 @@ class Train:
 
                 actor_loss = self.compute_actor_loss(ratio, adv)
 
-                # entropy_loss = new_dist.entropy().mean()
+                entropy_loss = new_dist.entropy().mean()
+                actor_loss -= self.beta * entropy_loss
 
                 total_actor_loss += actor_loss.item()
                 total_critic_loss += critic_loss.item()
