@@ -3,14 +3,14 @@ from xfoil import XFoil
 from xfoil.model import Airfoil
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
-from scipy.interpolate import CubicSpline
 import io
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from PIL import Image
-from torchvision import transforms
 import torch
 import cv2
+import bezier
+from blcokMeshDictMaker import make_block_mesh_dict
 
 
 class CustomAirfoilEnv:
@@ -21,21 +21,20 @@ class CustomAirfoilEnv:
 
         self.num_points = num_points
         self._initial_circles = [
-            ((0, 0), 0.002),
-            ((1, 0), 0.002),
+            ((0.001, 0), 0.001),
+            ((1-0.001, 0), 0.001),
+            ((0.5, 0), 0.1),
         ]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
             self.circles
         )  # state는 점을 제공 shape=(N, 2)
-        self.state = torch.zeros(1, 250, 500)  # 이미지 텐서
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
-        self.state = torch.zeros(1, 250, 500)  # 이미지 텐서
         self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
         return self.get_state()
 
@@ -44,7 +43,7 @@ class CustomAirfoilEnv:
         points, state = self.get_airfoil(self.circles, t=t)
         self.xfoil.airfoil = Airfoil(points[:, 0], points[:, 1])
         cl, cd, cm, cp = self.xfoil.a(2)  # angle of attack is 5 degrees
-        reward = cl * 100  # reward is lift coefficient
+        reward = cl
 
         if reward == 0 or np.isnan(reward):
             reward = -1
@@ -94,6 +93,8 @@ class CustomAirfoilEnv:
         hull_points = all_points[hull.vertices]
         interpolated_points = self.interpolate_linear_functions(hull_points)
 
+        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])
+
         plt.figure(figsize=(10, 5))
         # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
         plt.gca().set_aspect("equal")
@@ -125,23 +126,26 @@ class CustomAirfoilEnv:
         plt.savefig("airfoil.png")
 
         # Cubic Spline을 사용하여 보간된 점을 연결
-        cs_upper = CubicSpline(
-            np.concatenate(([0], np.flip(interpolated_points[0, : self.num_points]))),
-            np.concatenate(([0], np.flip(interpolated_points[1, : self.num_points]))),
+        cs_upper = bezier.Curve(
+            [( np.flip(interpolated_points[0, : self.num_points])),
+            (np.flip(interpolated_points[1, : self.num_points]))], degree=self.num_points
         )
-        cs_lower = CubicSpline(
-            np.concatenate(([0], interpolated_points[0, self.num_points :])),
-            np.concatenate(([0], interpolated_points[1, self.num_points :])),
+        cs_lower = bezier.Curve(
+            [(interpolated_points[0, self.num_points :]),
+            (interpolated_points[1, self.num_points :])], degree=self.num_points
         )
         x_fine_upper = np.linspace(0, 1, 10000)
         x_fine_lower = np.linspace(0, 1, 10000)
 
+        cs_upper = cs_upper.evaluate_multi(x_fine_upper)
+        cs_lower = cs_lower.evaluate_multi(x_fine_lower)
+
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.plot(x_fine_upper, cs_upper(x_fine_upper), color="black")
-        ax.plot(x_fine_lower, cs_lower(x_fine_lower), color="black")
-        ax.fill_between(x_fine_upper, cs_upper(x_fine_upper), cs_lower(x_fine_lower), color="black") 
+        ax.plot(x_fine_upper, cs_upper, color="black")
+        ax.plot(x_fine_lower, cs_lower, color="black")
+        ax.fill_between(x_fine_upper, cs_upper, cs_lower, color="black") 
         ax.axis("off")
         ax.axis("equal")
 
@@ -165,10 +169,6 @@ class CustomAirfoilEnv:
         """
         Convex Hull 점을 사용하여 선형 함수를 보간합니다.
         """
-        x_min = np.min(hull_points[:, 0])
-        x_argmin = np.argmin(hull_points[:, 0])
-        y_standard = hull_points[x_argmin, 1]
-        hull_points -= [x_min, y_standard]
 
         N_front = int(0.3 * self.num_points)
         N_back = self.num_points - N_front
@@ -197,6 +197,9 @@ class CustomAirfoilEnv:
         upper_front_x_values = np.geomspace(
             0.0001, 0.1, N_front, endpoint=False
         )  # 0 대신 최소값으로 시작
+
+
+        # UPPER
         upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
         upper_x_values = np.concatenate((upper_front_x_values, upper_back_x_values))
         upper_y_values = np.zeros(self.num_points)
@@ -246,8 +249,8 @@ class CustomAirfoilEnv:
                 + lower_intercepts[lower_current_segment]
             )
 
-        x_values = np.concatenate((upper_x_values, lower_x_values))
-        y_values = np.concatenate((upper_y_values, lower_y_values))
+        x_values = np.concatenate((upper_x_values, [0], lower_x_values))
+        y_values = np.concatenate((upper_y_values, [0], lower_y_values))
         values = np.vstack((x_values, y_values))
 
         return values

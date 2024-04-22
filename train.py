@@ -193,10 +193,11 @@ class Train:
 
     def print_logs(self, iteration, actor_loss, critic_loss, eval_rewards, steps):
 
-        if iteration == 1:
-            self.running_reward = eval_rewards
-        else:
-            self.running_reward = self.running_reward * 0.99 + eval_rewards * 0.01
+        # if iteration == 1:
+        #     self.running_reward = eval_rewards
+        # else:
+        #     self.running_reward = self.running_reward * 0.99 + eval_rewards * 0.01
+        self.running_reward = eval_rewards
         running_reward = torch.mean(self.running_reward)
         current_actor_lr = self.agent.actor_optimizer.param_groups[0]["lr"]
         current_critic_lr = self.agent.critic_optimizer.param_groups[0]["lr"]

@@ -5,7 +5,7 @@ from utils import set_seed
 
 
 ENV_NAME = "CustomAirfoilEnv"
-num_points = 80
+num_points = 49
 epochs = 10
 
 T = 10
