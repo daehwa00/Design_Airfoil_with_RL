@@ -18,7 +18,7 @@ parser.add_argument(
     help="Distance to outlet (x chord length)",
 )
 parser.add_argument(
-    "--angle_of_response", type=float, default=5, help="Angle of response (degree)"
+    "--angle_of_response", type=float, default=0, help="Angle of response (degree)"
 )
 parser.add_argument(
     "--depth_z_in_direction", type=float, default=0.3, help="Depth in Z direction"
@@ -196,6 +196,19 @@ def make_block_mesh_dict(airfoil_x, airfoil_y):
     airfoil_y_upper = airfoil_y[1: (airfoil_x.size + 1)// 2-1]
     airfoil_x_lower = airfoil_x[(airfoil_x.size + 1)// 2 : -1]
     airfoil_y_lower = airfoil_y[(airfoil_y.size + 1)// 2 : -1]
+
+    centroid_x = sum(airfoil_x) / len(airfoil_x)
+    centroid_y = sum(airfoil_y) / len(airfoil_y)
+
+    print(f"Centroid: ({centroid_x}, {centroid_y})")
+
+    area = 0
+    for i in range(len(airfoil_x)-1):
+        area += (airfoil_x[i] * airfoil_y[i + 1] - airfoil_x[i + 1] * airfoil_y[i])
+    area += (airfoil_x[-1] * airfoil_y[0] - airfoil_x[0] * airfoil_y[-1])
+    area = abs(area) / 2
+
+    print(f"Area: {area}")
 
 
     upper_coordinate_string_0 = "\n".join(

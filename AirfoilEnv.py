@@ -1,6 +1,4 @@
 import numpy as np
-from xfoil import XFoil
-from xfoil.model import Airfoil
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 import io
@@ -15,14 +13,14 @@ from blcokMeshDictMaker import make_block_mesh_dict
 
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
-        self.xfoil = XFoil()
-        self.xfoil.Re = 1e6
-        self.xfoil.max_iter = 100  # 최대 반복 횟수
-
         self.num_points = num_points
         self._initial_circles = [
             ((0.001, 0), 0.001),
             ((1-0.001, 0), 0.001),
+            ((0.1, 0), 0.1),
+            ((0.2, 0), 0.15),
+            ((0.3, 0), 0.1),
+            ((0.4, 0), 0.1),
             ((0.5, 0), 0.1),
         ]
         # 초기 상태 설정
@@ -30,19 +28,15 @@ class CustomAirfoilEnv:
         self.points, self.state = self.get_airfoil(
             self.circles
         )  # state는 점을 제공 shape=(N, 2)
-        self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
 
     def reset(self):
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
-        self.xfoil.airfoil = Airfoil(self.points[:, 0], self.points[:, 1])
         return self.get_state()
 
     def step(self, action, t=None):
         self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
-        self.xfoil.airfoil = Airfoil(points[:, 0], points[:, 1])
-        cl, cd, cm, cp = self.xfoil.a(2)  # angle of attack is 5 degrees
         reward = cl
 
         if reward == 0 or np.isnan(reward):
