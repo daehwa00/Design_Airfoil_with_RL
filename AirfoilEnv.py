@@ -9,6 +9,7 @@ import torch
 import cv2
 import bezier
 from blcokMeshDictMaker import make_block_mesh_dict
+from utils import run_simulation
 
 
 class CustomAirfoilEnv:
@@ -37,7 +38,8 @@ class CustomAirfoilEnv:
     def step(self, action, t=None):
         self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
-        reward = cl
+        self.points = points
+        Cd, Cl = run_simulation()
 
         if reward == 0 or np.isnan(reward):
             reward = -1
@@ -46,6 +48,11 @@ class CustomAirfoilEnv:
         self.state = next_state
 
         return next_state, reward
+    
+    def calculate_reward(self, Cd, Cl):
+        # 양항비
+        lift_drag_ratio = Cl / Cd
+        return lift_drag_ratio
 
     def get_state(self):
         """
@@ -77,7 +84,7 @@ class CustomAirfoilEnv:
 
     def get_airfoil(self, circles, t=None):
         """
-        주어진 원들을 사용하여 Airfoil 점을 생성
+        주어진 원들을 사용하여 airfoil을 생성합니다.
         """
         all_points = self.generate_all_circle_points(circles)
         all_points = all_points[
@@ -89,35 +96,7 @@ class CustomAirfoilEnv:
 
         make_block_mesh_dict(interpolated_points[0], interpolated_points[1])    # blockMeshDict 생성, controlDict는 고정
 
-        plt.figure(figsize=(10, 5))
-        # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
-        plt.gca().set_aspect("equal")
-        plt.plot(
-            np.array(hull_points[:, 0]),
-            np.array(hull_points[:, 1]),
-            "o-",
-            label="Hull Points",
-        )
-        plt.plot(
-            np.array(interpolated_points[0]),
-            np.array(interpolated_points[1]),
-            ".r",
-            label="Interpolated Points",
-        )
-        if t is not None:  # t가 주어진 경우, 이미지에 텍스트 추가
-            plt.text(
-                0.05,
-                0.95,
-                f"Image #{t + 1}",
-                transform=plt.gca().transAxes,
-                fontsize=12,
-                verticalalignment="top",
-            )
-        plt.legend()
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("Linear Interpolation of Convex Hull Points")
-        plt.savefig("airfoil.png")
+        self.plot_airfoil(hull_points, interpolated_points, t)
 
         # Cubic Spline을 사용하여 보간된 점을 연결
         cs_upper = bezier.Curve(
@@ -147,7 +126,12 @@ class CustomAirfoilEnv:
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=50)
         buf.seek(0)
+    
+        sdf = self.apply_sdf(buf)
 
+        return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
+
+    def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
         image.save("airfoil_image.png")
         _, binary_img = cv2.threshold(np.array(image), 127, 255, cv2.THRESH_BINARY) # 이진 이미지로 변환
@@ -155,10 +139,38 @@ class CustomAirfoilEnv:
         dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
         sdf = dist_inside - dist_outside
         sdf = sdf / np.max(np.abs(sdf))
+        return sdf
 
-        return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
-
-
+    def plot_airfoil(self, hull_points, interpolated_points, t=None):
+        plt.figure(figsize=(10, 5))
+        # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
+        plt.gca().set_aspect("equal")
+        plt.plot(
+            np.array(hull_points[:, 0]),
+            np.array(hull_points[:, 1]),
+            "o-",
+            label="Hull Points",
+        )
+        plt.plot(
+            np.array(interpolated_points[0]),
+            np.array(interpolated_points[1]),
+            ".r",
+            label="Interpolated Points",
+        )
+        if t is not None:  # t가 주어진 경우, 이미지에 텍스트 추가
+            plt.text(
+                0.05,
+                0.95,
+                f"Image #{t + 1}",
+                transform=plt.gca().transAxes,
+                fontsize=12,
+                verticalalignment="top",
+            )
+        plt.legend()
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.title("Linear Interpolation of Convex Hull Points")
+        plt.savefig("airfoil.png")
     def interpolate_linear_functions(self, hull_points):
         """
         Convex Hull 점을 사용하여 선형 함수를 보간합니다.
