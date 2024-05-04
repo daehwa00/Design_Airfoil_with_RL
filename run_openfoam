@@ -1,0 +1,4 @@
+#!/bin/bash
+blockMesh
+simpleFoam
+# 결과 처리 코드

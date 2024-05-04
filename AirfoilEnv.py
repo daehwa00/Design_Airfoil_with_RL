@@ -87,7 +87,7 @@ class CustomAirfoilEnv:
         hull_points = all_points[hull.vertices]
         interpolated_points = self.interpolate_linear_functions(hull_points)
 
-        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])
+        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])    # blockMeshDict 생성, controlDict는 고정
 
         plt.figure(figsize=(10, 5))
         # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
