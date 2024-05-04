@@ -24,13 +24,22 @@ def run_simulation():
     """
     OpenFOAM을 사용하여 시뮬레이션을 실행합니다.
     """
-    simulation_directory = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil"
-    os.chdir(simulation_directory)
+    setup_simulation_environment()
     clean_simulation()
     move_block_mesh_dict()
     generate_mesh()
-    Cd, Cl = run_and_read_force_data()
+    decompose_mesh()
+    run_parallel_simulation()
+    Cd, Cl = read_force_data()
     return Cd, Cl
+
+
+def setup_simulation_environment():
+    """
+    시뮬레이션 디렉토리로 작업 디렉토리를 변경합니다.
+    """
+    simulation_directory = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil"
+    os.chdir(simulation_directory)
 
 
 def clean_simulation():
@@ -46,15 +55,7 @@ def move_block_mesh_dict():
     """
     source_path = "/home/daehwa/Documents/3D-propeller-Design/blockMeshDict"
     destination_directory = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil/system"
-    destination_path = os.path.join(destination_directory, "blockMeshDict")
-
-    try:
-        shutil.move(source_path, destination_path)
-        print(f"blockMeshDict has been moved to {destination_path}")
-    except FileNotFoundError:
-        print(f"Error: {source_path} does not exist.")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+    os.system(f"cp {source_path} {destination_directory}")
 
 
 def generate_mesh():
@@ -64,12 +65,29 @@ def generate_mesh():
     os.system("blockMesh")
 
 
-def run_and_read_force_data():
+def decompose_mesh():
+    """
+    메시를 여러 부분으로 나누어 병렬 처리를 준비합니다.
+    """
+    os.system("decomposePar")
+
+
+def run_parallel_simulation():
+    """
+    병렬로 시뮬레이션을 실행합니다.
+    """
+    os.system(
+        "mpirun --oversubscribe -np 20 foamRun -solver incompressibleFluid -parallel"
+    )
+    os.system("reconstructPar")
+    os.system("rm -rf processor*")
+
+
+def read_force_data():
     """
     forceCoeffs.dat 파일을 읽어 마지막 줄의 시간, 항력 계수, 양력 계수를 반환합니다.
     """
     result_file_path = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil/postProcessing/forceCoeffs/0/forceCoeffs.dat"
-
     with open(result_file_path, "r") as file:
         lines = file.readlines()
 

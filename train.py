@@ -137,9 +137,7 @@ class Train:
                 # Actor
                 dists = self.agent.choose_dists(states, use_grad=False)
                 actions = self.agent.choose_actions(dists)
-                scaled_actions = (
-                    self.agent.scale_actions(actions).numpy().squeeze()
-                )  # x -> 0~0.8, r -> 0~0.2
+                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()
                 log_prob = dists.log_prob(actions).sum(dim=1)
 
                 # Critic
