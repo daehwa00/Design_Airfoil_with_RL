@@ -21,16 +21,26 @@ def read_force_data():
     """
     force.dat 파일을 읽어서 마지막 줄의 시간, 항력 계수, 양력 계수를 반환합니다.
     """
-    # 파일 경로 설정
-    file_path = 'path_to_your_force.dat'
 
-    # 파일 열기 및 읽기
-    with open(file_path, 'r') as file:
-        lines = file.readlines()  # 모든 줄을 읽어 리스트로 저장
+    # 시뮬레이션 디렉토리 경로 설정
+    simulation_directory = '/home/daehwa/OpenFOAM/daehwa-11/run/airfoil'
+
+    # 디렉토리 변경
+    os.chdir(simulation_directory)
+
+    # simpleFoam 실행 (os.system을 사용하여 커맨드 라인 명령 실행)
+    os.system('simpleFoam')
+
+    # 결과 파일 경로
+    result_file_path = os.path.join(simulation_directory, 'postProcessing/forces/0/force.dat')
+
+    # 결과 파일 처리
+    with open(result_file_path, 'r') as file:
+        lines = file.readlines()
 
     # 마지막 데이터 줄 추출
-    last_line = lines[-1]  # 마지막 줄 가져오기
-    data = last_line.split()  # 공백으로 분리
+    last_line = lines[-1]
+    data = last_line.split()
 
     # 필요한 데이터 추출
     time = float(data[0])  # 시간
@@ -39,3 +49,23 @@ def read_force_data():
 
     # 결과 출력
     print(f"Time: {time}, Drag Coefficient (Cd): {Cd}, Lift Coefficient (Cl): {Cl}")
+
+import shutil
+import os
+
+
+def move_block_mesh_dict():
+    """
+    blockMeshDict 파일을 생성 위치에서 시뮬레이션 디렉토리로 이동합니다.
+    """
+    # 파일 경로 설정
+    source_path = './blockMeshDict'  # 현재 디렉토리
+    destination_directory = '/home/daehwa/OpenFOAM/daehwa-11/run/airfoil'
+
+    # 대상 경로 생성 (blockMeshDict 파일이 저장될 위치)
+    destination_path = os.path.join(destination_directory, 'constant/polyMesh/blockMeshDict')
+
+    # 파일 이동 (복사 후 원본 삭제를 원한다면 shutil.copy() 사용 후 os.remove()로 원본 삭제)
+    shutil.move(source_path, destination_path)
+
+    print(f"blockMeshDict has been moved to {destination_path}")
