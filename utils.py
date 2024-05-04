@@ -17,18 +17,22 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def read_force_data():
+def run_simulation():
+    """
+    OpenFOAM을 사용하여 시뮬레이션을 실행합니다.
+    """
+    move_block_mesh_dict()
+    os.system('blockMesh')
+    Cd, Cl = run_and_read_force_data()
+
+    return Cd, Cl
+
+def run_and_read_force_data():
     """
     force.dat 파일을 읽어서 마지막 줄의 시간, 항력 계수, 양력 계수를 반환합니다.
     """
-
-    # 시뮬레이션 디렉토리 경로 설정
     simulation_directory = '/home/daehwa/OpenFOAM/daehwa-11/run/airfoil'
-
-    # 디렉토리 변경
     os.chdir(simulation_directory)
-
-    # simpleFoam 실행 (os.system을 사용하여 커맨드 라인 명령 실행)
     os.system('simpleFoam')
 
     # 결과 파일 경로
@@ -47,8 +51,7 @@ def read_force_data():
     Cd = float(data[2])    # 항력 계수
     Cl = float(data[3])    # 양력 계수
 
-    # 결과 출력
-    print(f"Time: {time}, Drag Coefficient (Cd): {Cd}, Lift Coefficient (Cl): {Cl}")
+    return Cd, Cl
 
 import shutil
 import os
