@@ -17,7 +17,7 @@ class CustomAirfoilEnv:
         self.num_points = num_points
         self._initial_circles = [
             ((0.001, 0), 0.001),
-            ((1-0.001, 0), 0.001),
+            ((1 - 0.001, 0), 0.001),
             ((0.1, 0), 0.1),
             ((0.2, 0), 0.15),
             ((0.3, 0), 0.1),
@@ -40,15 +40,12 @@ class CustomAirfoilEnv:
         points, state = self.get_airfoil(self.circles, t=t)
         self.points = points
         Cd, Cl = run_simulation()
-
-        if reward == 0 or np.isnan(reward):
-            reward = -1
-
+        reward = self.calculate_reward(Cd, Cl)
         next_state = state
         self.state = next_state
 
         return next_state, reward
-    
+
     def calculate_reward(self, Cd, Cl):
         # 양항비
         lift_drag_ratio = Cl / Cd
@@ -94,18 +91,26 @@ class CustomAirfoilEnv:
         hull_points = all_points[hull.vertices]
         interpolated_points = self.interpolate_linear_functions(hull_points)
 
-        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])    # blockMeshDict 생성, controlDict는 고정
+        make_block_mesh_dict(
+            interpolated_points[0], interpolated_points[1]
+        )  # blockMeshDict 생성, controlDict는 고정
 
-        self.plot_airfoil(hull_points, interpolated_points, t)
+        # self.plot_airfoil(hull_points, interpolated_points, t)
 
         # Cubic Spline을 사용하여 보간된 점을 연결
         cs_upper = bezier.Curve(
-            [( np.flip(interpolated_points[0, : self.num_points])),
-            (np.flip(interpolated_points[1, : self.num_points]))], degree=self.num_points
+            [
+                (np.flip(interpolated_points[0, : self.num_points])),
+                (np.flip(interpolated_points[1, : self.num_points])),
+            ],
+            degree=self.num_points - 1,
         )
         cs_lower = bezier.Curve(
-            [(interpolated_points[0, self.num_points :]),
-            (interpolated_points[1, self.num_points :])], degree=self.num_points
+            [
+                (interpolated_points[0, self.num_points :]),
+                (interpolated_points[1, self.num_points :]),
+            ],
+            degree=self.num_points,
         )
         x_fine_upper = np.linspace(0, 1, 10000)
         x_fine_lower = np.linspace(0, 1, 10000)
@@ -116,9 +121,9 @@ class CustomAirfoilEnv:
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.plot(x_fine_upper, cs_upper, color="black")
-        ax.plot(x_fine_lower, cs_lower, color="black")
-        ax.fill_between(x_fine_upper, cs_upper, cs_lower, color="black") 
+        ax.plot(x_fine_upper, cs_upper[1], color="black")
+        ax.plot(x_fine_lower, cs_lower[1], color="black")
+        ax.fill_between(x_fine_upper, cs_upper[1], cs_lower[1], color="black")
         ax.axis("off")
         ax.axis("equal")
 
@@ -126,7 +131,7 @@ class CustomAirfoilEnv:
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=50)
         buf.seek(0)
-    
+
         sdf = self.apply_sdf(buf)
 
         return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
@@ -134,8 +139,10 @@ class CustomAirfoilEnv:
     def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
         image.save("airfoil_image.png")
-        _, binary_img = cv2.threshold(np.array(image), 127, 255, cv2.THRESH_BINARY) # 이진 이미지로 변환
-        dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)  
+        _, binary_img = cv2.threshold(
+            np.array(image), 127, 255, cv2.THRESH_BINARY
+        )  # 이진 이미지로 변환
+        dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)
         dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
         sdf = dist_inside - dist_outside
         sdf = sdf / np.max(np.abs(sdf))
@@ -171,6 +178,7 @@ class CustomAirfoilEnv:
         plt.ylabel("Y")
         plt.title("Linear Interpolation of Convex Hull Points")
         plt.savefig("airfoil.png")
+
     def interpolate_linear_functions(self, hull_points):
         """
         Convex Hull 점을 사용하여 선형 함수를 보간합니다.
@@ -203,7 +211,6 @@ class CustomAirfoilEnv:
         upper_front_x_values = np.geomspace(
             0.0001, 0.1, N_front, endpoint=False
         )  # 0 대신 최소값으로 시작
-
 
         # UPPER
         upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
