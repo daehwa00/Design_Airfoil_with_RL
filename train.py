@@ -130,7 +130,7 @@ class Train:
                 device=self.device,
             )
             states = self.env.reset()
-            states = torch.tensor(states, dtype=torch.float32).to(self.device)
+            states = states.to(self.device)
 
             # 1 episode (data collection)
             for t in range(self.horizon):
@@ -238,5 +238,7 @@ class Train:
 
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
-        plt.savefig(f"results/results_graphs.png")
+        plt.savefig(
+            f"/home/daehwa/Documents/3D-propeller-Design/results/results_graphs.png"
+        )
         plt.close()

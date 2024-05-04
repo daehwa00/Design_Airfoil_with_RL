@@ -192,10 +192,10 @@ calculated_vertex_y = math.sin(math.pi / 180 * args.angle_of_response) * (
 
 def make_block_mesh_dict(airfoil_x, airfoil_y):
     # airfoil의 가운데 점 찾기
-    airfoil_x_upper = airfoil_x[1: (airfoil_x.size + 1)// 2-1]
-    airfoil_y_upper = airfoil_y[1: (airfoil_x.size + 1)// 2-1]
-    airfoil_x_lower = airfoil_x[(airfoil_x.size + 1)// 2 : -1]
-    airfoil_y_lower = airfoil_y[(airfoil_y.size + 1)// 2 : -1]
+    airfoil_x_upper = airfoil_x[1 : (airfoil_x.size + 1) // 2 - 1]
+    airfoil_y_upper = airfoil_y[1 : (airfoil_x.size + 1) // 2 - 1]
+    airfoil_x_lower = airfoil_x[(airfoil_x.size + 1) // 2 : -1]
+    airfoil_y_lower = airfoil_y[(airfoil_y.size + 1) // 2 : -1]
 
     centroid_x = sum(airfoil_x) / len(airfoil_x)
     centroid_y = sum(airfoil_y) / len(airfoil_y)
@@ -203,13 +203,12 @@ def make_block_mesh_dict(airfoil_x, airfoil_y):
     print(f"Centroid: ({centroid_x}, {centroid_y})")
 
     area = 0
-    for i in range(len(airfoil_x)-1):
-        area += (airfoil_x[i] * airfoil_y[i + 1] - airfoil_x[i + 1] * airfoil_y[i])
-    area += (airfoil_x[-1] * airfoil_y[0] - airfoil_x[0] * airfoil_y[-1])
+    for i in range(len(airfoil_x) - 1):
+        area += airfoil_x[i] * airfoil_y[i + 1] - airfoil_x[i + 1] * airfoil_y[i]
+    area += airfoil_x[-1] * airfoil_y[0] - airfoil_x[0] * airfoil_y[-1]
     area = abs(area) / 2
 
     print(f"Area: {area}")
-
 
     upper_coordinate_string_0 = "\n".join(
         f"(\t{xi:.6f}\t{yi:.6f}\t0\t)"
@@ -489,5 +488,5 @@ mergePatchPairs
 """
 
     # blockMeshDict 파일 생성
-    with open("blockMeshDict", "w") as f:
+    with open("./blockMeshDict", "w") as f:
         f.write(block_mesh_content)

@@ -8,7 +8,7 @@ from PIL import Image
 import torch
 import cv2
 import bezier
-from blcokMeshDictMaker import make_block_mesh_dict
+from blockMeshDictMaker import make_block_mesh_dict
 from utils import run_simulation
 
 
