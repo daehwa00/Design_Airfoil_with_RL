@@ -18,7 +18,7 @@ parser.add_argument(
     help="Distance to outlet (x chord length)",
 )
 parser.add_argument(
-    "--angle_of_response", type=float, default=0, help="Angle of response (degree)"
+    "--angle_of_response", type=float, default=5, help="Angle of response (degree)"
 )
 parser.add_argument(
     "--depth_z_in_direction", type=float, default=0.3, help="Depth in Z direction"

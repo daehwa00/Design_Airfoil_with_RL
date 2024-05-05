@@ -15,15 +15,7 @@ from utils import run_simulation
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
         self.num_points = num_points
-        self._initial_circles = [
-            ((0.001, 0), 0.001),
-            ((1 - 0.001, 0), 0.001),
-            ((0.1, 0), 0.1),
-            ((0.2, 0), 0.15),
-            ((0.3, 0), 0.1),
-            ((0.4, 0), 0.1),
-            ((0.5, 0), 0.1),
-        ]
+        self._initial_circles = []
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
