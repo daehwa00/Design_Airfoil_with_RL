@@ -18,7 +18,7 @@ def setup_simulation_environment():
     """
     시뮬레이션 디렉토리로 작업 디렉토리를 변경합니다.
     """
-    simulation_directory = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil"
+    simulation_directory = "~/OpenFOAM/daehwa-11/run/airfoil"
     os.chdir(simulation_directory)
 
 
@@ -33,8 +33,8 @@ def move_block_mesh_dict():
     """
     blockMeshDict 파일을 적절한 위치로 이동합니다.
     """
-    source_path = "/home/daehwa/Documents/3D-propeller-Design/blockMeshDict"
-    destination_directory = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil/system"
+    source_path = "~/Documents/3D-propeller-Design/blockMeshDict"
+    destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/system"
     os.system(f"cp {source_path} {destination_directory}")
 
 
@@ -67,10 +67,10 @@ def read_force_data():
     """
     forceCoeffs.dat 파일을 읽어 마지막 줄의 시간, 항력 계수, 양력 계수를 반환합니다.
     """
-    result_file_path = "/home/daehwa/OpenFOAM/daehwa-11/run/airfoil/postProcessing/forceCoeffs/0/forceCoeffs.dat"
+    result_file_path = "~/OpenFOAM/daehwa-11/run/airfoil/postProcessing/forceCoeffs/0/forceCoeffs.dat"
     with open(result_file_path, "r") as file:
         lines = file.readlines()
 
     last_line = lines[-1].split()
-    time, Cd, Cl = float(last_line[0]), float(last_line[2]), float(last_line[3])
+    Cd, Cl = float(last_line[2]), float(last_line[3])
     return Cd, Cl
