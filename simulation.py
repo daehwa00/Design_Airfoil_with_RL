@@ -6,7 +6,7 @@ def run_simulation():
     """
     setup_simulation_environment()
     clean_simulation()
-    move_block_mesh_dict()
+    move_block_mesh_dict_and_control_dict()
     generate_mesh()
     decompose_mesh()
     run_parallel_simulation()
