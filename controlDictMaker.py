@@ -70,7 +70,7 @@ def controlDictMaker(centroid_x, centroid_y, area):
             dragDir         (1 0 0);             // 항력 방향
             magUInf         25.75;               // 유입 속도 (m/s)
             lRef            1;                   // 참조 길이 (m)
-            Aref            {area:.2f}           // 참조 면적 (m^2)
+            Aref            {area:.2f};           // 참조 면적 (m^2)
         }}
     }}
 
@@ -81,5 +81,3 @@ def controlDictMaker(centroid_x, centroid_y, area):
     # blockMeshDict 파일 생성
     with open("./controlDict", "w") as f:
         f.write(control_dict_content)
-
-    controlDictMaker(centroid_x, centroid_y, area)
