@@ -40,10 +40,11 @@ class TensorManager:
         rewards,
         values,
         log_probs,
+        traj_idx,
         t,
     ):
-        self.states_tensor[:, t] = states
-        self.actions_tensor[:, t] = actions
-        self.rewards_tensor[:, t] = rewards
-        self.values_tensor[:, t] = values.squeeze()
-        self.log_probs_tensor[:, t] = log_probs
+        self.states_tensor[traj_idx, t, :] = states
+        self.actions_tensor[traj_idx, t] = actions
+        self.rewards_tensor[traj_idx, t] = rewards
+        self.values_tensor[traj_idx, t] = values.squeeze()
+        self.log_probs_tensor[traj_idx, t] = log_probs

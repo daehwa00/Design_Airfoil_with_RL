@@ -7,6 +7,7 @@ from model.model import Actor, Critic
 class Agent(nn.Module):
     def __init__(self, n_actions=2, lr=1e-4):
         super().__init__()
+        self.n_actions = n_actions
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # Actor
         self.actor = Actor(n_actions).to(self.device)

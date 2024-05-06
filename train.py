@@ -12,9 +12,11 @@ class Train:
         agent,
         epochs,
         mini_batch_size,
+        n_iterations,
         num_points,
-        epsilon,
         horizon,
+        number_of_trajectories,
+        epsilon,
         beta=0.01,
     ):
         self.env = env
@@ -24,7 +26,8 @@ class Train:
         self.horizon = horizon
         self.epochs = epochs
         self.num_points = num_points
-        self.n_iterations = 100
+        self.number_of_trajectories = number_of_trajectories
+        self.n_iterations = n_iterations
         self.mini_batch_size = mini_batch_size
         self.start_time = 0
         self.state = None  # Image Tensor
@@ -35,6 +38,55 @@ class Train:
         self.actor_loss_history = []
         self.critic_loss_history = []
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    def step(self):
+        for iteration in range(1, 1 + self.n_iterations):
+            tensor_manager = TensorManager(
+                env_num=self.number_of_trajectories,
+                horizon=self.horizon,
+                state_shape=(250, 500), # Image shape
+                action_dim=self.agent.n_actions,
+                device=self.device,
+            )
+            state = self.env.reset()
+            state = state.to(self.device)
+
+            with torch.no_grad(): 
+                for n in range(self.number_of_trajectories):
+                    # 1 episode (data collection)
+                    for t in range(self.horizon):
+                        # Actor
+                        dist = self.agent.choose_dists(state, use_grad=False)
+                        action = self.agent.choose_actions(dist)
+                        scaled_actions = self.agent.scale_actions(action).numpy().squeeze()
+                        log_prob = dist.log_prob(action).sum(dim=1)
+
+                        # Critic
+                        value = self.agent.get_value(state, use_grad=False)
+                        next_state, reward = self.env.step(scaled_actions, t=t)
+
+                        tensor_manager.update_tensors(
+                            state,
+                            action,
+                            reward,
+                            value,
+                            log_prob,
+                            n,
+                            t,
+                        )
+
+                        state = torch.tensor(next_state, dtype=torch.float32).to(self.device)
+
+                    next_value = self.agent.get_value(state, use_grad=False)
+                    tensor_manager.values_tensor[:, -1] = next_value.squeeze()
+
+            advs = self.get_gae(tensor_manager)
+            tensor_manager.advantages_tensor = advs
+            # Train the agent
+            actor_loss, critic_loss = self.train(tensor_manager)
+            eval_rewards = tensor_manager.rewards_tensor[0, -1]
+
+            self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
 
     def train(
         self,
@@ -119,52 +171,6 @@ class Train:
         loss = -torch.min(pg_loss1, pg_loss2).mean()
 
         return loss
-
-    def step(self):
-        for iteration in range(1, 1 + self.n_iterations):
-            tensor_manager = TensorManager(
-                env_num=1,
-                horizon=self.horizon,
-                state_shape=(250, 500),
-                action_dim=2,
-                device=self.device,
-            )
-            states = self.env.reset()
-            states = states.to(self.device)
-
-            # 1 episode (data collection)
-            for t in range(self.horizon):
-                # Actor
-                dists = self.agent.choose_dists(states, use_grad=False)
-                actions = self.agent.choose_actions(dists)
-                scaled_actions = self.agent.scale_actions(actions).numpy().squeeze()
-                log_prob = dists.log_prob(actions).sum(dim=1)
-
-                # Critic
-                value = self.agent.get_value(states, use_grad=False)
-                next_states, rewards = self.env.step(scaled_actions, t=t)
-
-                tensor_manager.update_tensors(
-                    states,
-                    actions,
-                    rewards,
-                    value,
-                    log_prob,
-                    t,
-                )
-
-                states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
-
-            next_value = self.agent.get_value(states, use_grad=False)
-            tensor_manager.values_tensor[:, -1] = next_value.squeeze()
-
-            advs = self.get_gae(tensor_manager)
-            tensor_manager.advantages_tensor = advs
-            # Train the agent
-            actor_loss, critic_loss = self.train(tensor_manager)
-            eval_rewards = tensor_manager.rewards_tensor[0, -1]
-
-            self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
 
     def choose_mini_batch(
         self,

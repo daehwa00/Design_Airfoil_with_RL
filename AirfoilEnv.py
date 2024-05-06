@@ -20,7 +20,7 @@ class CustomAirfoilEnv:
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
             self.circles
-        )  # state는 점을 제공 shape=(N, 2)
+        ) 
 
     def reset(self):
         self.circles = self._initial_circles.copy()
