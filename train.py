@@ -80,13 +80,11 @@ class Train:
                     next_value = self.agent.get_value(state, use_grad=False)
                     tensor_manager.values_tensor[:, -1] = next_value.squeeze()
 
-            advs = self.get_gae(tensor_manager)
-            tensor_manager.advantages_tensor = advs
+            tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
-            eval_rewards = tensor_manager.rewards_tensor[0, -1]
 
-            self.print_logs(iteration, actor_loss, critic_loss, eval_rewards, t)
+            self.print_logs(iteration, actor_loss, critic_loss, t)
 
     def train(
         self,
@@ -146,7 +144,7 @@ class Train:
 
         return avg_actor_loss, avg_critic_loss
 
-    def get_gae(self, tensor_manager, gamma=0.9, lam=0.95):
+    def get_gae(self, tensor_manager, gamma=0.99, lam=0.95):
         rewards = tensor_manager.rewards_tensor
         values = tensor_manager.values_tensor
         num_env, horizon = rewards.shape
@@ -195,16 +193,11 @@ class Train:
                 log_probs[:, indices],
             )
 
-    def print_logs(self, iteration, actor_loss, critic_loss, eval_rewards, steps):
+    def print_logs(self, actor_loss, critic_loss, steps):
 
-        # if iteration == 1:
-        #     self.running_reward = eval_rewards
-        # else:
-        #     self.running_reward = self.running_reward * 0.99 + eval_rewards * 0.01
-        self.running_reward = eval_rewards
         running_reward = torch.mean(self.running_reward)
-        current_actor_lr = self.agent.actor_optimizer.param_groups[0]["lr"]
-        current_critic_lr = self.agent.critic_optimizer.param_groups[0]["lr"]
+        # current_actor_lr = self.agent.actor_optimizer.param_groups[0]["lr"]
+        # current_critic_lr = self.agent.critic_optimizer.param_groups[0]["lr"]
 
         self.steps_history.append(steps)
         self.rewards_history.append(running_reward.item())
@@ -215,11 +208,6 @@ class Train:
         critic_loss = (
             critic_loss.item() if torch.is_tensor(critic_loss) else critic_loss
         )
-        # eval_rewards의 평균을 계산
-        if torch.is_tensor(eval_rewards):
-            eval_rewards_val = eval_rewards.mean().item()
-        else:
-            eval_rewards_val = eval_rewards
 
         running_reward_val = torch.mean(self.running_reward).item()
         self.plot_and_save()
@@ -243,6 +231,6 @@ class Train:
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
         plt.savefig(
-            f"/home/daehwa/Documents/3D-propeller-Design/results/results_graphs.png"
+            f"./results/results_graphs.png"
         )
         plt.close()
