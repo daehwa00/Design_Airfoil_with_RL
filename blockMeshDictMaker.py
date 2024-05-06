@@ -1,5 +1,6 @@
 import argparse
 import math
+from controlDictMaker import controlDictMaker
 
 # 명령줄 인수 처리를 위한 Parser 설정
 parser = argparse.ArgumentParser(
@@ -490,3 +491,5 @@ mergePatchPairs
     # blockMeshDict 파일 생성
     with open("./blockMeshDict", "w") as f:
         f.write(block_mesh_content)
+
+    controlDictMaker(centroid_x, centroid_y, area)

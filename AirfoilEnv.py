@@ -9,13 +9,13 @@ import torch
 import cv2
 import bezier
 from blockMeshDictMaker import make_block_mesh_dict
-from utils import run_simulation
+from simulation import run_simulation
 
 
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
         self.num_points = num_points
-        self._initial_circles = []
+        self._initial_circles = [((0.03, 0), 0.03), ((1-0.03, 0), 0.03)]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
@@ -87,7 +87,7 @@ class CustomAirfoilEnv:
             interpolated_points[0], interpolated_points[1]
         )  # blockMeshDict 생성, controlDict는 고정
 
-        # self.plot_airfoil(hull_points, interpolated_points, t)
+        self.plot_airfoil(hull_points, interpolated_points, t)
 
         # Cubic Spline을 사용하여 보간된 점을 연결
         cs_upper = bezier.Curve(
