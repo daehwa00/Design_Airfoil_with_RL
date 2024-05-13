@@ -7,15 +7,13 @@ from matplotlib.figure import Figure
 from PIL import Image
 import torch
 import cv2
-import bezier
 from blockMeshDictMaker import make_block_mesh_dict
 from simulation import run_simulation
-
 
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
         self.num_points = num_points
-        self._initial_circles = [((0.03, 0), 0.03), ((1-0.03, 0), 0.03)]
+        self._initial_circles = [((0.02, 0), 0.02), ((1-0.02, 0), 0.02)]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
@@ -81,41 +79,28 @@ class CustomAirfoilEnv:
         ]  # x 좌표가 1보다 작거나 같은 점만 유지
         hull = ConvexHull(all_points)
         hull_points = all_points[hull.vertices]
-        interpolated_points = self.interpolate_linear_functions(hull_points)
 
+        interpolated_points = self.interpolate_linear_functions(hull_points)
         make_block_mesh_dict(
             interpolated_points[0], interpolated_points[1]
-        )  # blockMeshDict 생성, controlDict는 고정
+        )
 
         self.plot_airfoil(hull_points, interpolated_points, t)
 
         # Cubic Spline을 사용하여 보간된 점을 연결
-        cs_upper = bezier.Curve(
-            [
-                (np.flip(interpolated_points[0, : self.num_points])),
-                (np.flip(interpolated_points[1, : self.num_points])),
-            ],
-            degree=self.num_points - 1,
+        num_points = 200  # 적절한 값으로 설정
+        cs_upper = bezier_curve(
+            np.vstack([interpolated_points[:, :self.num_points].T, (0, 0)]), num=num_points
         )
-        cs_lower = bezier.Curve(
-            [
-                (interpolated_points[0, self.num_points :]),
-                (interpolated_points[1, self.num_points :]),
-            ],
-            degree=self.num_points,
+        cs_lower = bezier_curve(
+            np.vstack([np.flip(interpolated_points[:, self.num_points:].T, axis=0), (0, 0)]), num=num_points
         )
-        x_fine_upper = np.linspace(0, 1, 10000)
-        x_fine_lower = np.linspace(0, 1, 10000)
-
-        cs_upper = cs_upper.evaluate_multi(x_fine_upper)
-        cs_lower = cs_lower.evaluate_multi(x_fine_lower)
-
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
-        ax.plot(x_fine_upper, cs_upper[1], color="black")
-        ax.plot(x_fine_lower, cs_lower[1], color="black")
-        ax.fill_between(x_fine_upper, cs_upper[1], cs_lower[1], color="black")
+        ax.plot(cs_upper[:, 0], cs_upper[:, 1], color="black")
+        ax.plot(cs_lower[:, 0], cs_lower[:, 1], color="black")
+        ax.fill_between(cs_upper[:, 0], cs_upper[:, 1], cs_lower[:, 1], color="black")
         ax.axis("off")
         ax.axis("equal")
 
@@ -130,32 +115,33 @@ class CustomAirfoilEnv:
 
     def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
-        image.save("airfoil_image.png")
         _, binary_img = cv2.threshold(
             np.array(image), 127, 255, cv2.THRESH_BINARY
-        )  # 이진 이미지로 변환
+        )
         dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)
         dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
         sdf = dist_inside - dist_outside
         sdf = sdf / np.max(np.abs(sdf))
+
         return sdf
 
     def plot_airfoil(self, hull_points, interpolated_points, t=None):
-        plt.figure(figsize=(10, 5))
-        # xlim과 ylim을 같게 설정하여 비율을 유지합니다.
-        plt.gca().set_aspect("equal")
+        plt.figure(figsize=(10, 5))  # 새로운 그림 생성
+        plt.gca().set_aspect("equal", adjustable='box')  # 비율을 유지합니다.
+        
         plt.plot(
             np.array(hull_points[:, 0]),
             np.array(hull_points[:, 1]),
             "o-",
-            label="Hull Points",
+            label="Hull Points"
         )
         plt.plot(
             np.array(interpolated_points[0]),
             np.array(interpolated_points[1]),
             ".r",
-            label="Interpolated Points",
+            label="Interpolated Points"
         )
+        
         if t is not None:  # t가 주어진 경우, 이미지에 텍스트 추가
             plt.text(
                 0.05,
@@ -163,18 +149,25 @@ class CustomAirfoilEnv:
                 f"Image #{t + 1}",
                 transform=plt.gca().transAxes,
                 fontsize=12,
-                verticalalignment="top",
+                verticalalignment="top"
             )
+        
         plt.legend()
         plt.xlabel("X")
         plt.ylabel("Y")
         plt.title("Linear Interpolation of Convex Hull Points")
-        plt.savefig("airfoil.png")
+        plt.savefig("airfoil.png")  # 파일 이름에 인덱스 추가
+        plt.close("all")  # 그림 닫기
+
 
     def interpolate_linear_functions(self, hull_points):
         """
         Convex Hull 점을 사용하여 선형 함수를 보간합니다.
         """
+        x_min = np.min(hull_points[:, 0])
+        x_argmin = np.argmin(hull_points[:, 0])
+        y_standard = hull_points[x_argmin, 1]
+        hull_points -= [x_min, y_standard]
 
         N_front = int(0.3 * self.num_points)
         N_back = self.num_points - N_front
@@ -203,8 +196,6 @@ class CustomAirfoilEnv:
         upper_front_x_values = np.geomspace(
             0.0001, 0.1, N_front, endpoint=False
         )  # 0 대신 최소값으로 시작
-
-        # UPPER
         upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
         upper_x_values = np.concatenate((upper_front_x_values, upper_back_x_values))
         upper_y_values = np.zeros(self.num_points)
@@ -254,12 +245,23 @@ class CustomAirfoilEnv:
                 + lower_intercepts[lower_current_segment]
             )
 
-        x_values = np.concatenate((upper_x_values, [0], lower_x_values))
-        y_values = np.concatenate((upper_y_values, [0], lower_y_values))
+        x_values = np.concatenate((upper_x_values, lower_x_values))
+        y_values = np.concatenate((upper_y_values, lower_y_values))
         values = np.vstack((x_values, y_values))
 
         return values
 
-
 def make_env(num_points=80):
     return CustomAirfoilEnv(num_points=num_points)
+
+def bezier_curve(points, num=1000):
+    n = len(points) - 1
+    b = [binomial_coeff(n, i) for i in range(n + 1)]
+    t = np.linspace(0, 1, num)
+    curve = np.zeros((num, 2))
+    for i in range(n + 1):
+        curve += np.outer(b[i] * (t ** i) * ((1 - t) ** (n - i)), points[i])
+    return curve
+
+def binomial_coeff(n, k):
+    return np.math.factorial(n) / (np.math.factorial(k) * np.math.factorial(n - k))

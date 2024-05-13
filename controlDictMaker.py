@@ -26,7 +26,7 @@ def controlDictMaker(centroid_x, centroid_y, area):
 
     stopAt          endTime;
 
-    endTime         500;
+    endTime         50;
 
     deltaT          1;
 
@@ -73,7 +73,19 @@ def controlDictMaker(centroid_x, centroid_y, area):
             Aref            {area:.2f};           // 참조 면적 (m^2)
         }}
     }}
-
+    // 추가: 잔차 기반 종료 조건
+    residuals
+    {{
+        type            residuals;
+        functionObjectLibs ("libutilityFunctionObjects.so");
+        outputControl   timeStep;
+        outputInterval  1;
+        residualControl
+        {{
+            p               1e-6; // 압력에 대한 잔차 수렴 기준
+            U               1e-6; // 속도에 대한 잔차 수렴 기준
+        }}
+    }}
     // ************************************************************************* //
 
     """

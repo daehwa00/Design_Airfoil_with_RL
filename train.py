@@ -2,7 +2,7 @@ import torch
 from multiprocessing import Pool
 from AirfoilEnv import *
 from tensormanager import TensorManager
-
+import os
 
 class Train:
     def __init__(
@@ -48,11 +48,12 @@ class Train:
                 action_dim=self.agent.n_actions,
                 device=self.device,
             )
-            state = self.env.reset()
-            state = state.to(self.device)
+
 
             with torch.no_grad(): 
                 for n in range(self.number_of_trajectories):
+                    state = self.env.reset()
+                    state = state.to(self.device)
                     # 1 episode (data collection)
                     for t in range(self.horizon):
                         # Actor
@@ -81,10 +82,14 @@ class Train:
                     tensor_manager.values_tensor[:, -1] = next_value.squeeze()
 
             tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
+            tensor_manager.returns = (
+                tensor_manager.advantages_tensor + tensor_manager.values_tensor[:, :-1]
+            )
+            tensor_manager.flatten_tensors()
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
 
-            self.print_logs(iteration, actor_loss, critic_loss, t)
+            self.print_logs(actor_loss, critic_loss)
 
     def train(
         self,
@@ -92,9 +97,6 @@ class Train:
     ):
         total_actor_loss, total_critic_loss = 0, 0
         total_mini_batches = 0
-        returns = (
-            tensor_manager.advantages_tensor + tensor_manager.values_tensor[:, :-1]
-        )
         for epoch in range(self.epochs):
             for (
                 state,
@@ -107,7 +109,7 @@ class Train:
                 self.mini_batch_size,
                 tensor_manager.states_tensor,
                 tensor_manager.actions_tensor,
-                returns,
+                tensor_manager.return_tensor,
                 tensor_manager.advantages_tensor,
                 tensor_manager.values_tensor,
                 tensor_manager.log_probs_tensor,
@@ -180,27 +182,23 @@ class Train:
         values,
         log_probs,
     ):
-
-        for _ in range(self.horizon // mini_batch_size):
+        full_batch_size = states.size(0)
+        for _ in range(full_batch_size // mini_batch_size):
             # 무작위로 mini_batch_size 개의 인덱스를 선택
-            indices = torch.randperm(self.horizon)[:mini_batch_size].to(states.device)
+            indices = torch.randperm(full_batch_size)[:mini_batch_size].to(
+                states.device
+            )
             yield (
-                states[:, indices],
-                actions[:, indices],
-                returns[:, indices],
-                advs[:, indices],
-                values[:, indices],
-                log_probs[:, indices],
+                states[indices],
+                actions[indices],
+                returns[indices],
+                advs[indices],
+                values[indices],
+                log_probs[indices],
             )
 
-    def print_logs(self, actor_loss, critic_loss, steps):
+    def print_logs(self, actor_loss, critic_loss):
 
-        running_reward = torch.mean(self.running_reward)
-        # current_actor_lr = self.agent.actor_optimizer.param_groups[0]["lr"]
-        # current_critic_lr = self.agent.critic_optimizer.param_groups[0]["lr"]
-
-        self.steps_history.append(steps)
-        self.rewards_history.append(running_reward.item())
         self.actor_loss_history.append(actor_loss)
         self.critic_loss_history.append(critic_loss)
 
@@ -208,20 +206,15 @@ class Train:
         critic_loss = (
             critic_loss.item() if torch.is_tensor(critic_loss) else critic_loss
         )
-
-        running_reward_val = torch.mean(self.running_reward).item()
         self.plot_and_save()
 
     def plot_and_save(self):
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
-        axs[0, 0].plot(self.steps_history, label="Average Steps")
-        axs[0, 0].set_title("Average Steps")
-        axs[0, 1].plot(self.rewards_history, label="Running Reward")
-        axs[0, 1].set_title("Running Reward")
-        axs[1, 0].plot(self.actor_loss_history, label="Actor Loss")
-        axs[1, 0].set_title("Actor Loss")
-        axs[1, 1].plot(self.critic_loss_history, label="Critic Loss")
-        axs[1, 1].set_title("Critic Loss")
+        os.chdir(os.path.dirname(__file__))
+        fig, axs = plt.subplots(1, 2, figsize=(12, 10))
+        axs[0].plot(self.actor_loss_history, label="Actor Loss")
+        axs[0].set_title("Actor Loss")
+        axs[1].plot(self.critic_loss_history, label="Critic Loss")
+        axs[1].set_title("Critic Loss")
 
         for ax in axs.flat:
             ax.set_xlabel("Iteration")  # 모든 서브플롯에 x축 레이블 설정

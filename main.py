@@ -11,7 +11,7 @@ n_iterations = 100
 
 T = 10
 clip_range = 0.2
-beta = 0.1  # 엔트로피 항에 대한 가중치
+beta = 0.03  # 엔트로피 항에 대한 가중치
 mini_batch_size = 10
 batch_size = 16
 processes = batch_size
