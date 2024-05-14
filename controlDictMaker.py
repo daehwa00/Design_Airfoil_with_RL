@@ -26,7 +26,7 @@ def controlDictMaker(centroid_x, centroid_y, area):
 
     stopAt          endTime;
 
-    endTime         50;
+    endTime         200;
 
     deltaT          1;
 

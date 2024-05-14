@@ -126,7 +126,7 @@ class CustomAirfoilEnv:
         return sdf
 
     def plot_airfoil(self, hull_points, interpolated_points, t=None):
-        plt.figure(figsize=(10, 5))  # 새로운 그림 생성
+        plt.figure(figsize=(5, 10))  # 새로운 그림 생성
         plt.gca().set_aspect("equal", adjustable='box')  # 비율을 유지합니다.
         
         plt.plot(

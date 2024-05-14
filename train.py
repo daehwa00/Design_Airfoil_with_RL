@@ -79,8 +79,9 @@ class Train:
                         state = torch.tensor(next_state, dtype=torch.float32).to(self.device)
 
                     next_value = self.agent.get_value(state, use_grad=False)
-                    tensor_manager.values_tensor[:, -1] = next_value.squeeze()
+                    tensor_manager.values_tensor[n, -1] = next_value.squeeze()
 
+            sum_of_last_rewards = tensor_manager.rewards_tensor[:, -1].sum() / self.number_of_trajectories
             tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
             tensor_manager.returns = (
                 tensor_manager.advantages_tensor + tensor_manager.values_tensor[:, :-1]
@@ -89,7 +90,7 @@ class Train:
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
 
-            self.print_logs(actor_loss, critic_loss)
+            self.print_logs(actor_loss, critic_loss, sum_of_last_rewards)
 
     def train(
         self,
@@ -197,10 +198,11 @@ class Train:
                 log_probs[indices],
             )
 
-    def print_logs(self, actor_loss, critic_loss):
+    def print_logs(self, actor_loss, critic_loss, sum_of_last_rewards):
 
         self.actor_loss_history.append(actor_loss)
         self.critic_loss_history.append(critic_loss)
+        self.rewards_history.append(sum_of_last_rewards)
 
         actor_loss = actor_loss.item() if torch.is_tensor(actor_loss) else actor_loss
         critic_loss = (
@@ -210,11 +212,13 @@ class Train:
 
     def plot_and_save(self):
         os.chdir(os.path.dirname(__file__))
-        fig, axs = plt.subplots(1, 2, figsize=(12, 10))
+        fig, axs = plt.subplots(1, 3, figsize=(15, 5))
         axs[0].plot(self.actor_loss_history, label="Actor Loss")
         axs[0].set_title("Actor Loss")
         axs[1].plot(self.critic_loss_history, label="Critic Loss")
         axs[1].set_title("Critic Loss")
+        axs[2].plot(self.rewards_history, label="Rewards")
+        axs[2].set_title("Rewards")
 
         for ax in axs.flat:
             ax.set_xlabel("Iteration")  # 모든 서브플롯에 x축 레이블 설정
