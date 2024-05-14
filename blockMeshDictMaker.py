@@ -1,6 +1,7 @@
 import argparse
 import math
 from controlDictMaker import controlDictMaker
+from initialConditionMaker import initialConditionMaker
 
 # 명령줄 인수 처리를 위한 Parser 설정
 parser = argparse.ArgumentParser(
@@ -493,3 +494,4 @@ mergePatchPairs
         f.write(block_mesh_content)
 
     controlDictMaker(centroid_x, centroid_y, area)
+    initialConditionMaker(args.angle_of_response)

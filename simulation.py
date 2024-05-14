@@ -40,7 +40,10 @@ def move_block_mesh_dict_and_control_dict():
     source_path = "~/Documents/3D-propeller-Design/controlDict"
     os.system(f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}")
 
-
+    source_path = "~/Documents/3D-propeller-Design/U"
+    destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/0"
+    os.system(f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}")
+    
 def generate_mesh():
     """
     blockMesh를 사용하여 메시를 생성합니다.

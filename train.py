@@ -40,7 +40,7 @@ class Train:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def step(self):
-        for iteration in range(1, 1 + self.n_iterations):
+        for _ in range(1, 1 + self.n_iterations):
             tensor_manager = TensorManager(
                 env_num=self.number_of_trajectories,
                 horizon=self.horizon,

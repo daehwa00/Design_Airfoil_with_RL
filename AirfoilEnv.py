@@ -18,7 +18,8 @@ class CustomAirfoilEnv:
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(
             self.circles
-        ) 
+        )
+        self.best_lift_drag_ratio = 0
 
     def reset(self):
         self.circles = self._initial_circles.copy()
@@ -30,7 +31,11 @@ class CustomAirfoilEnv:
         points, state = self.get_airfoil(self.circles, t=t)
         self.points = points
         Cd, Cl = run_simulation()
-        reward = self.calculate_reward(Cd, Cl)
+        lift_drag_ratio = self.calculate_reward(Cd, Cl)
+        reward = lift_drag_ratio - self.best_lift_drag_ratio 
+        if lift_drag_ratio > self.best_lift_drag_ratio:
+            self.best_lift_drag_ratio = lift_drag_ratio
+            reward += 0.5
         next_state = state
         self.state = next_state
 
