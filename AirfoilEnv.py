@@ -7,8 +7,8 @@ from matplotlib.figure import Figure
 from PIL import Image
 import torch
 import cv2
-from blockMeshDictMaker import make_block_mesh_dict
 from simulation import run_simulation
+from OPENFOAM_MAKER import make_block_mesh_dict
 
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
