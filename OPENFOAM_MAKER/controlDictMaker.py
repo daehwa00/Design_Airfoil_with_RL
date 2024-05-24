@@ -1,4 +1,4 @@
-def controlDictMaker(centroid_x, centroid_y, area):
+def make_controlDict(centroid_x, centroid_y, area):
     control_dict_content = f"""
     /*--------------------------------*- C++ -*----------------------------------*\
     =========                 |

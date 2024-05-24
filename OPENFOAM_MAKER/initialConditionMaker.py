@@ -1,6 +1,6 @@
 import math
 
-def make_initial_condition(angle_of_attack: float):
+def make_initial_condition(angle_of_attack):
     initial_condition_content = f"""
     /*--------------------------------*- C++ -*----------------------------------*\
     =========                 |

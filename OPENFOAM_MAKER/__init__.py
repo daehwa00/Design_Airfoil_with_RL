@@ -1,3 +1,3 @@
 from .blockMeshDictMaker import make_block_mesh_dict
-from .controlDictMaker import controlDictMaker
-from .initialConditionMaker import initialConditionMaker
+from .controlDictMaker import make_controlDict
+from .initialConditionMaker import make_initial_condition
