@@ -1,5 +1,6 @@
 import os
 
+
 def run_simulation():
     """
     OpenFOAM을 사용하여 시뮬레이션을 실행합니다.
@@ -35,15 +36,22 @@ def move_block_mesh_dict_and_control_dict():
     """
     source_path = "~/Documents/3D-propeller-Design/blockMeshDict"
     destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/system"
-    os.system(f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}")
+    os.system(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    )
 
     source_path = "~/Documents/3D-propeller-Design/controlDict"
-    os.system(f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}")
+    os.system(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    )
 
     source_path = "~/Documents/3D-propeller-Design/U"
     destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/0"
-    os.system(f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}")
-    
+    os.system(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    )
+
+
 def generate_mesh():
     """
     blockMesh를 사용하여 메시를 생성합니다.
@@ -63,7 +71,7 @@ def run_parallel_simulation():
     병렬로 시뮬레이션을 실행합니다.
     """
     os.system(
-        "mpirun --oversubscribe -np 20 foamRun -solver incompressibleFluid -parallel"
+        "mpirun --oversubscribe -np 20 simpleFoam -solver incompressibleFluid -parallel"
     )
     os.system("reconstructPar")
     os.system("rm -rf processor*")
@@ -73,7 +81,9 @@ def read_force_data():
     """
     forceCoeffs.dat 파일을 읽어 마지막 줄의 시간, 항력 계수, 양력 계수를 반환합니다.
     """
-    result_file_path = "~/OpenFOAM/daehwa-11/run/airfoil/postProcessing/forceCoeffs/0/forceCoeffs.dat"
+    result_file_path = (
+        "~/OpenFOAM/daehwa-11/run/airfoil/postProcessing/forceCoeffs/0/forceCoeffs.dat"
+    )
     with open(os.path.expanduser(result_file_path), "r") as file:
         lines = file.readlines()
 
