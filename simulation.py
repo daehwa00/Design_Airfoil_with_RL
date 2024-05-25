@@ -9,7 +9,9 @@ def run_simulation():
     clean_simulation()
     move_block_mesh_dict_and_control_dict()
     generate_mesh()
+    remove_processor_directories()
     decompose_mesh()
+    set_permissions()
     run_parallel_simulation()
     Cd, Cl = read_force_data()
     return Cd, Cl
@@ -59,6 +61,21 @@ def generate_mesh():
     os.system("blockMesh")
 
 
+def set_permissions():
+    """
+    points 파일에 대한 권한을 설정합니다.
+    """
+    points_path = "~/OpenFOAM/daehwa-11/run/airfoil/constant/polyMesh/points"
+    os.system(f"chmod 777 {os.path.expanduser(points_path)}")
+
+
+def remove_processor_directories():
+    """
+    기존의 processor 디렉토리를 삭제합니다.
+    """
+    os.system("rm -rf processor*")
+
+
 def decompose_mesh():
     """
     메시를 여러 부분으로 나누어 병렬 처리를 준비합니다.
@@ -71,7 +88,7 @@ def run_parallel_simulation():
     병렬로 시뮬레이션을 실행합니다.
     """
     os.system(
-        "mpirun --oversubscribe -np 20 simpleFoam -solver incompressibleFluid -parallel"
+        "mpirun --oversubscribe -np 20 foamRun -solver incompressibleFluid -parallel"
     )
     os.system("reconstructPar")
     os.system("rm -rf processor*")

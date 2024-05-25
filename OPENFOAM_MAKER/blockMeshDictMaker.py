@@ -228,14 +228,13 @@ def make_block_mesh_dict(airfoil_x, airfoil_y):
         for xi, yi in zip(airfoil_x_lower, airfoil_y_lower)
     )
     # blockMeshDict 파일 내용 작성
-    block_mesh_content = f"""
-/*--------------------------------*- C++ -*----------------------------------*\\
-| =========                 |                                                 |
-| \\      /  F ield         | daehwa001210@gmail.com                          |
-|  \\    /   O peration     | Made By Daehwa Ko                               |
-|   \\  /    A nd           |                                                 |
-|    \\/     M anipulation  |                                                 |
-\\*---------------------------------------------------------------------------*/
+    block_mesh_content = f"""/*--------------------------------*- C++ -*----------------------------------*\\
+  =========                 |
+  \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\\\    /   O peration     | Website:  https://openfoam.org
+    \\\\  /    A nd           | Version:  11
+     \\\\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
 FoamFile
 {{
     version     2.0;
