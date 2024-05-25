@@ -1,7 +1,7 @@
 import numpy as np
 
-# NACA 0012 (160 points)
 naca0012 = {
+    # 1->0, 0->1
     "x": np.array(
         [
             1.0000,

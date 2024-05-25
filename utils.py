@@ -17,3 +17,16 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+
+def bezier_curve(points, num=1000):
+    n = len(points) - 1
+    b = [binomial_coeff(n, i) for i in range(n + 1)]
+    t = np.linspace(0, 1, num)
+    curve = np.zeros((num, 2))
+    for i in range(n + 1):
+        curve += np.outer(b[i] * (t**i) * ((1 - t) ** (n - i)), points[i])
+    return curve
+
+
+def binomial_coeff(n, k):
+    return np.math.factorial(n) / (np.math.factorial(k) * np.math.factorial(n - k))

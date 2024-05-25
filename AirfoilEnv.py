@@ -9,16 +9,16 @@ import torch
 import cv2
 from simulation import run_simulation
 from OPENFOAM_MAKER import make_block_mesh_dict
+from utils import bezier_curve
+
 
 class CustomAirfoilEnv:
     def __init__(self, num_points=80):
         self.num_points = num_points
-        self._initial_circles = [((0.02, 0), 0.02), ((1-0.02, 0), 0.02)]
+        self._initial_circles = [((0.02, 0), 0.02), ((1 - 0.02, 0), 0.02)]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
-        self.points, self.state = self.get_airfoil(
-            self.circles
-        )
+        self.points, self.state = self.get_airfoil(self.circles)
         self.best_lift_drag_ratio = 0
 
     def reset(self):
@@ -32,7 +32,7 @@ class CustomAirfoilEnv:
         self.points = points
         Cd, Cl = run_simulation()
         lift_drag_ratio = self.calculate_reward(Cd, Cl)
-        reward = lift_drag_ratio - self.best_lift_drag_ratio 
+        reward = lift_drag_ratio - self.best_lift_drag_ratio
         if lift_drag_ratio > self.best_lift_drag_ratio:
             self.best_lift_drag_ratio = lift_drag_ratio
             reward += 0.5
@@ -86,19 +86,21 @@ class CustomAirfoilEnv:
         hull_points = all_points[hull.vertices]
 
         interpolated_points = self.interpolate_linear_functions(hull_points)
-        make_block_mesh_dict(
-            interpolated_points[0], interpolated_points[1]
-        )
+        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])
 
         self.plot_airfoil(hull_points, interpolated_points, t)
 
         # Cubic Spline을 사용하여 보간된 점을 연결
         num_points = 200  # 적절한 값으로 설정
         cs_upper = bezier_curve(
-            np.vstack([interpolated_points[:, :self.num_points].T, (0, 0)]), num=num_points
+            np.vstack([interpolated_points[:, : self.num_points].T, (0, 0)]),
+            num=num_points,
         )
         cs_lower = bezier_curve(
-            np.vstack([np.flip(interpolated_points[:, self.num_points:].T, axis=0), (0, 0)]), num=num_points
+            np.vstack(
+                [np.flip(interpolated_points[:, self.num_points :].T, axis=0), (0, 0)]
+            ),
+            num=num_points,
         )
         fig = Figure(figsize=(10, 5))
         canvas = FigureCanvas(fig)
@@ -120,9 +122,7 @@ class CustomAirfoilEnv:
 
     def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
-        _, binary_img = cv2.threshold(
-            np.array(image), 127, 255, cv2.THRESH_BINARY
-        )
+        _, binary_img = cv2.threshold(np.array(image), 127, 255, cv2.THRESH_BINARY)
         dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)
         dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
         sdf = dist_inside - dist_outside
@@ -132,21 +132,21 @@ class CustomAirfoilEnv:
 
     def plot_airfoil(self, hull_points, interpolated_points, t=None):
         plt.figure(figsize=(5, 10))  # 새로운 그림 생성
-        plt.gca().set_aspect("equal", adjustable='box')  # 비율을 유지합니다.
-        
+        plt.gca().set_aspect("equal", adjustable="box")  # 비율을 유지합니다.
+
         plt.plot(
             np.array(hull_points[:, 0]),
             np.array(hull_points[:, 1]),
             "o-",
-            label="Hull Points"
+            label="Hull Points",
         )
         plt.plot(
             np.array(interpolated_points[0]),
             np.array(interpolated_points[1]),
             ".r",
-            label="Interpolated Points"
+            label="Interpolated Points",
         )
-        
+
         if t is not None:  # t가 주어진 경우, 이미지에 텍스트 추가
             plt.text(
                 0.05,
@@ -154,16 +154,15 @@ class CustomAirfoilEnv:
                 f"Image #{t + 1}",
                 transform=plt.gca().transAxes,
                 fontsize=12,
-                verticalalignment="top"
+                verticalalignment="top",
             )
-        
+
         plt.legend()
         plt.xlabel("X")
         plt.ylabel("Y")
         plt.title("Linear Interpolation of Convex Hull Points")
         plt.savefig("airfoil.png")  # 파일 이름에 인덱스 추가
         plt.close("all")  # 그림 닫기
-
 
     def interpolate_linear_functions(self, hull_points):
         """
@@ -256,17 +255,6 @@ class CustomAirfoilEnv:
 
         return values
 
+
 def make_env(num_points=80):
     return CustomAirfoilEnv(num_points=num_points)
-
-def bezier_curve(points, num=1000):
-    n = len(points) - 1
-    b = [binomial_coeff(n, i) for i in range(n + 1)]
-    t = np.linspace(0, 1, num)
-    curve = np.zeros((num, 2))
-    for i in range(n + 1):
-        curve += np.outer(b[i] * (t ** i) * ((1 - t) ** (n - i)), points[i])
-    return curve
-
-def binomial_coeff(n, k):
-    return np.math.factorial(n) / (np.math.factorial(k) * np.math.factorial(n - k))
