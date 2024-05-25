@@ -45,7 +45,7 @@ class Train:
             tensor_manager = TensorManager(
                 env_num=self.number_of_trajectories,
                 horizon=self.horizon,
-                state_shape=(250, 500),  # Image shape
+                state_shape=(240, 340),  # Image shape
                 action_dim=self.agent.n_actions,
                 device=self.device,
             )
@@ -78,9 +78,7 @@ class Train:
                             t,
                         )
 
-                        state = torch.tensor(next_state, dtype=torch.float32).to(
-                            self.device
-                        )
+                        state = next_state.clone().detach().float().to(self.device)
 
                     next_value = self.agent.get_value(state, use_grad=False)
                     tensor_manager.values_tensor[n, -1] = next_value.squeeze()
@@ -208,7 +206,7 @@ class Train:
 
         self.actor_loss_history.append(actor_loss)
         self.critic_loss_history.append(critic_loss)
-        self.rewards_history.append(sum_of_last_rewards)
+        self.rewards_history.append(sum_of_last_rewards.cpu().numpy())
 
         actor_loss = actor_loss.item() if torch.is_tensor(actor_loss) else actor_loss
         critic_loss = (

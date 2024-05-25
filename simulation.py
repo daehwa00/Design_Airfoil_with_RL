@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 
 def run_simulation():
@@ -29,7 +30,9 @@ def clean_simulation():
     """
     시뮬레이션 디렉토리를 정리합니다.
     """
-    os.system("sh ./Allclean")
+    subprocess.run(
+        "sh ./Allclean", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
 
 def move_block_mesh_dict_and_control_dict():
@@ -38,19 +41,28 @@ def move_block_mesh_dict_and_control_dict():
     """
     source_path = "~/Documents/3D-propeller-Design/blockMeshDict"
     destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/system"
-    os.system(
-        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    subprocess.run(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
     source_path = "~/Documents/3D-propeller-Design/controlDict"
-    os.system(
-        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    subprocess.run(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
     source_path = "~/Documents/3D-propeller-Design/U"
     destination_directory = "~/OpenFOAM/daehwa-11/run/airfoil/0"
-    os.system(
-        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}"
+    subprocess.run(
+        f"mv {os.path.expanduser(source_path)} {os.path.expanduser(destination_directory)}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
 
@@ -58,7 +70,9 @@ def generate_mesh():
     """
     blockMesh를 사용하여 메시를 생성합니다.
     """
-    os.system("blockMesh")
+    subprocess.run(
+        "blockMesh", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
 
 def set_permissions():
@@ -66,32 +80,48 @@ def set_permissions():
     points 파일에 대한 권한을 설정합니다.
     """
     points_path = "~/OpenFOAM/daehwa-11/run/airfoil/constant/polyMesh/points"
-    os.system(f"chmod 777 {os.path.expanduser(points_path)}")
+    subprocess.run(
+        f"chmod 777 {os.path.expanduser(points_path)}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
 
 def remove_processor_directories():
     """
     기존의 processor 디렉토리를 삭제합니다.
     """
-    os.system("rm -rf processor*")
+    subprocess.run(
+        "rm -rf processor*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
 
 def decompose_mesh():
     """
     메시를 여러 부분으로 나누어 병렬 처리를 준비합니다.
     """
-    os.system("decomposePar")
+    subprocess.run(
+        "decomposePar", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
 
 def run_parallel_simulation():
     """
     병렬로 시뮬레이션을 실행합니다.
     """
-    os.system(
-        "mpirun --oversubscribe -np 20 foamRun -solver incompressibleFluid -parallel"
+    subprocess.run(
+        "mpirun --oversubscribe -np 20 foamRun -solver incompressibleFluid -parallel",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
-    os.system("reconstructPar")
-    os.system("rm -rf processor*")
+    subprocess.run(
+        "reconstructPar", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    subprocess.run(
+        "rm -rf processor*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
 
 
 def read_force_data():
