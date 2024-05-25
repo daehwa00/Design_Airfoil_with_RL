@@ -4,7 +4,7 @@ from train import Train
 from utils import set_seed
 
 
-ENV_NAME = "CustomAirfoilEnv"
+ENV_NAME = "AirfoilEnv"
 num_points = 49
 epochs = 10
 n_iterations = 100
