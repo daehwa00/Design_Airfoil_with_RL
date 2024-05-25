@@ -2,6 +2,7 @@ from NACA import *
 from utils import bezier_curve
 import numpy as np
 from matplotlib import pyplot as plt
+from simulation import run_simulation
 
 # Load NACA 0012, 4412 data
 naca0012 = naca0012
@@ -19,18 +20,22 @@ naca4412 = bezier_curve(np.array([naca4412["x"], naca4412["y"]]).T, num=num_poin
 fig, axes = plt.subplots(1, 2, figsize=(15, 5))
 
 # Plot NACA 0012
-axes[0].plot(naca0012[:, 0], naca0012[:, 1], label="Upper Surface")
+axes[0].fill(naca0012[:, 0], naca0012[:, 1], color="blue", alpha=0.3)
+axes[0].plot(naca0012[:, 0], naca0012[:, 1], label="NACA 0012 Surface", color="blue")
 axes[0].set_aspect("equal")
 axes[0].set_xlabel("X")
 axes[0].set_ylabel("Y")
 axes[0].set_title("NACA 0012 Airfoil")
 
 # Plot NACA 4412
-axes[1].plot(naca4412[:, 0], naca4412[:, 1], label="Upper Surface")
+axes[1].fill(naca4412[:, 0], naca4412[:, 1], color="red", alpha=0.3)
+axes[1].plot(naca4412[:, 0], naca4412[:, 1], label="NACA 4412 Surface", color="red")
 axes[1].set_aspect("equal")
 axes[1].set_xlabel("X")
 axes[1].set_ylabel("Y")
 axes[1].set_title("NACA 4412 Airfoil")
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
+
+Cd, Cl = run_simulation()

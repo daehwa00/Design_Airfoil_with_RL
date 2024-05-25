@@ -2,14 +2,13 @@ import numpy as np
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 import io
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.figure import Figure
 from PIL import Image
 import torch
 import cv2
 from simulation import run_simulation
 from OPENFOAM_MAKER import make_block_mesh_dict
 from utils import bezier_curve
+from scipy.interpolate import interp1d
 
 
 class CustomAirfoilEnv:
@@ -30,6 +29,7 @@ class CustomAirfoilEnv:
         self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
         self.points = points
+        make_block_mesh_dict(points[:, 0], points[:, 1])
         Cd, Cl = run_simulation()
         lift_drag_ratio = self.calculate_reward(Cd, Cl)
         reward = lift_drag_ratio - self.best_lift_drag_ratio
@@ -86,47 +86,51 @@ class CustomAirfoilEnv:
         hull_points = all_points[hull.vertices]
 
         interpolated_points = self.interpolate_linear_functions(hull_points)
-        make_block_mesh_dict(interpolated_points[0], interpolated_points[1])
 
-        self.plot_airfoil(hull_points, interpolated_points, t)
+        num_points = len(interpolated_points)
+        airfoil = bezier_curve(interpolated_points, num=num_points)
 
-        # Cubic Spline을 사용하여 보간된 점을 연결
-        num_points = 200  # 적절한 값으로 설정
-        cs_upper = bezier_curve(
-            np.vstack([interpolated_points[:, : self.num_points].T, (0, 0)]),
-            num=num_points,
-        )
-        cs_lower = bezier_curve(
-            np.vstack(
-                [np.flip(interpolated_points[:, self.num_points :].T, axis=0), (0, 0)]
-            ),
-            num=num_points,
-        )
-        fig = Figure(figsize=(10, 5))
-        canvas = FigureCanvas(fig)
-        ax = fig.add_subplot(111)
-        ax.plot(cs_upper[:, 0], cs_upper[:, 1], color="black")
-        ax.plot(cs_lower[:, 0], cs_lower[:, 1], color="black")
-        ax.fill_between(cs_upper[:, 0], cs_upper[:, 1], cs_lower[:, 1], color="black")
+        # 단일 Figure 객체와 Axes 객체 생성
+        fig, ax = plt.subplots(
+            figsize=(6.8, 4.8)
+        )  # 인치 단위로 크기 설정 (6.8*50, 4.8*50 = 340, 240)
+        ax.fill(airfoil[:, 0], airfoil[:, 1], "k")
+        ax.set_aspect("equal")
+        ax.set_xlim(-0.2, 1.5)
+        ax.set_ylim(-0.6, 0.6)
         ax.axis("off")
-        ax.axis("equal")
 
         # 메모리에 이미지 저장
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=50)
+        fig.savefig(
+            buf, format="png", dpi=50, bbox_inches="tight", pad_inches=0
+        )  # 50 DPI로 저장
         buf.seek(0)
 
         sdf = self.apply_sdf(buf)
 
-        return interpolated_points.T, torch.tensor(sdf).unsqueeze(0).float()
+        sdf_tensor = torch.tensor(sdf).unsqueeze(0).float()
+        resized_sdf_tensor = torch.nn.functional.interpolate(
+            sdf_tensor.unsqueeze(0),
+            size=(240, 340),
+            mode="bilinear",
+            align_corners=False,
+        ).squeeze(0)
+
+        # 이미지 크기를 조정하지 않고 바로 반환
+        return interpolated_points, resized_sdf_tensor
 
     def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
-        _, binary_img = cv2.threshold(np.array(image), 127, 255, cv2.THRESH_BINARY)
+        image_array = np.array(image)
+
+        _, binary_img = cv2.threshold(image_array, 127, 255, cv2.THRESH_BINARY)
+
         dist_outside = cv2.distanceTransform(255 - binary_img, cv2.DIST_L2, 5)
         dist_inside = cv2.distanceTransform(binary_img, cv2.DIST_L2, 5)
         sdf = dist_inside - dist_outside
-        sdf = sdf / np.max(np.abs(sdf))
+
+        sdf /= 100
 
         return sdf
 
@@ -168,92 +172,67 @@ class CustomAirfoilEnv:
         """
         Convex Hull 점을 사용하여 선형 함수를 보간합니다.
         """
+
+        # Normalize the hull points
         x_min = np.min(hull_points[:, 0])
         x_argmin = np.argmin(hull_points[:, 0])
         y_standard = hull_points[x_argmin, 1]
         hull_points -= [x_min, y_standard]
 
-        N_front = int(0.3 * self.num_points)
-        N_back = self.num_points - N_front
+        # Sort points by x values
+        hull_points = hull_points[hull_points[:, 0].argsort()]
 
-        # x 좌표의 최대값으로 모든 x 좌표를 정규화
-        x_max = np.max(hull_points[:, 0])
-        hull_points[:, 0] /= x_max
-        hull_points[:, 1] /= x_max  # y 좌표도 x 최대값으로 나누어 비율 유지
+        # Separate upper and lower points
+        upper_points = hull_points[hull_points[:, 1] >= 0]
+        lower_points = hull_points[hull_points[:, 1] < 0]
 
-        hull_points = np.vstack([hull_points, hull_points[0]])  # 경로 닫기
-
-        # x 좌표를 기준으로 정렬 (시계 방향 또는 반시계 방향 보장)
-        hull_points = hull_points[np.argsort(hull_points[:, 0])]
-
-        # UPPER
-        upper_hull_points = hull_points[hull_points[:, 1] >= 0]
-        # 각 선분에 대한 x 및 y의 기울기 계산
-        upper_dx = np.diff(upper_hull_points[:, 0])
-        upper_dy = np.diff(upper_hull_points[:, 1])
-        upper_slopes = upper_dy / upper_dx
-        upper_intercepts = (
-            upper_hull_points[:-1, 1] - upper_slopes * upper_hull_points[:-1, 0]
+        # Sampling points
+        sampling_points = np.array(
+            [
+                1,
+                0.95,
+                0.9,
+                0.8,
+                0.7,
+                0.6,
+                0.5,
+                0.4,
+                0.3,
+                0.25,
+                0.2,
+                0.15,
+                0.1,
+                0.075,
+                0.05,
+                0.025,
+                0.0125,
+                0,
+            ]
         )
 
-        # N+1을 사용하고 endpoint=False를 추가합니다.
-        upper_front_x_values = np.geomspace(
-            0.0001, 0.1, N_front, endpoint=False
-        )  # 0 대신 최소값으로 시작
-        upper_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
-        upper_x_values = np.concatenate((upper_front_x_values, upper_back_x_values))
-        upper_y_values = np.zeros(self.num_points)
-
-        upper_current_segment = 0
-        for i in range(self.num_points):
-            upper_x = upper_x_values[i]
-            while (
-                upper_current_segment < len(upper_slopes) - 1
-                and upper_x > upper_hull_points[upper_current_segment + 1, 0]
-            ):
-                upper_current_segment += 1
-            upper_y_values[i] = (
-                upper_slopes[upper_current_segment] * upper_x
-                + upper_intercepts[upper_current_segment]
-            )
-
-        upper_x_values = np.flip(upper_x_values)  # x 좌표를 다시 뒤집습니다.
-        upper_y_values = np.flip(upper_y_values)
-        # LOWER
-        lower_hull_points = hull_points[hull_points[:, 1] <= 0]
-
-        lower_dx = np.diff(lower_hull_points[:, 0])
-        lower_dy = np.diff(lower_hull_points[:, 1])
-        lower_slopes = lower_dy / lower_dx
-        lower_intercepts = (
-            lower_hull_points[:-1, 1] - lower_slopes * lower_hull_points[:-1, 0]
+        # Interpolate upper points
+        upper_x = upper_points[:, 0]
+        upper_y = upper_points[:, 1]
+        upper_interp = interp1d(
+            upper_x, upper_y, kind="linear", fill_value="extrapolate"
         )
+        upper_sampling_y = upper_interp(sampling_points)
 
-        lower_front_x_values = np.geomspace(
-            0.0001, 0.1, N_front, endpoint=False
-        )  # 0 대신 최소값으로 시작
-        lower_back_x_values = np.linspace(0.1, 1, N_back, endpoint=True)
-        lower_x_values = np.concatenate((lower_front_x_values, lower_back_x_values))
-        lower_y_values = np.zeros(self.num_points)
+        # Interpolate lower points
+        lower_x = lower_points[:, 0]
+        lower_y = lower_points[:, 1]
+        lower_interp = interp1d(
+            lower_x, lower_y, kind="linear", fill_value="extrapolate"
+        )
+        lower_sampling_y = lower_interp(sampling_points[::-1])  # Reverse for lower
 
-        lower_current_segment = 0
-        for i in range(self.num_points):
-            lower_x = lower_x_values[i]
-            while (
-                lower_current_segment < len(lower_slopes) - 1
-                and lower_x > lower_hull_points[lower_current_segment + 1, 0]
-            ):
-                lower_current_segment += 1
-            lower_y_values[i] = (
-                lower_slopes[lower_current_segment] * lower_x
-                + lower_intercepts[lower_current_segment]
-            )
+        # Combine upper and lower sampling points
+        upper_sampling_points = np.vstack((sampling_points, upper_sampling_y)).T
+        lower_sampling_points = np.vstack((sampling_points[::-1], lower_sampling_y)).T
 
-        x_values = np.concatenate((upper_x_values, lower_x_values))
-        y_values = np.concatenate((upper_y_values, lower_y_values))
-        values = np.vstack((x_values, y_values))
-
-        return values
+        # Combine upper and lower points into a single array
+        sampled_points = np.vstack((upper_sampling_points, lower_sampling_points))
+        return sampled_points
 
 
 def make_env(num_points=80):

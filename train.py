@@ -4,6 +4,7 @@ from AirfoilEnv import *
 from tensormanager import TensorManager
 import os
 
+
 class Train:
     def __init__(
         self,
@@ -44,13 +45,12 @@ class Train:
             tensor_manager = TensorManager(
                 env_num=self.number_of_trajectories,
                 horizon=self.horizon,
-                state_shape=(250, 500), # Image shape
+                state_shape=(250, 500),  # Image shape
                 action_dim=self.agent.n_actions,
                 device=self.device,
             )
 
-
-            with torch.no_grad(): 
+            with torch.no_grad():
                 for n in range(self.number_of_trajectories):
                     state = self.env.reset()
                     state = state.to(self.device)
@@ -59,7 +59,9 @@ class Train:
                         # Actor
                         dist = self.agent.choose_dists(state, use_grad=False)
                         action = self.agent.choose_actions(dist)
-                        scaled_actions = self.agent.scale_actions(action).numpy().squeeze()
+                        scaled_actions = (
+                            self.agent.scale_actions(action.cpu()).numpy().squeeze()
+                        )
                         log_prob = dist.log_prob(action).sum(dim=1)
 
                         # Critic
@@ -76,12 +78,16 @@ class Train:
                             t,
                         )
 
-                        state = torch.tensor(next_state, dtype=torch.float32).to(self.device)
+                        state = torch.tensor(next_state, dtype=torch.float32).to(
+                            self.device
+                        )
 
                     next_value = self.agent.get_value(state, use_grad=False)
                     tensor_manager.values_tensor[n, -1] = next_value.squeeze()
 
-            sum_of_last_rewards = tensor_manager.rewards_tensor[:, -1].sum() / self.number_of_trajectories
+            sum_of_last_rewards = (
+                tensor_manager.rewards_tensor[:, -1].sum() / self.number_of_trajectories
+            )
             tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
             tensor_manager.returns = (
                 tensor_manager.advantages_tensor + tensor_manager.values_tensor[:, :-1]
@@ -227,7 +233,5 @@ class Train:
 
         fig.subplots_adjust(hspace=0.2, wspace=0.2)
 
-        plt.savefig(
-            f"./results/results_graphs.png"
-        )
+        plt.savefig(f"./results/results_graphs.png")
         plt.close()

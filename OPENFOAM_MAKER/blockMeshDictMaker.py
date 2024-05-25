@@ -1,7 +1,6 @@
 import argparse
 import math
-from controlDictMaker import controlDictMaker
-from initialConditionMaker import initialConditionMaker
+
 
 # 명령줄 인수 처리를 위한 Parser 설정
 parser = argparse.ArgumentParser(
@@ -196,8 +195,8 @@ def make_block_mesh_dict(airfoil_x, airfoil_y):
     # airfoil의 가운데 점 찾기
     airfoil_x_upper = airfoil_x[1 : (airfoil_x.size + 1) // 2 - 1]
     airfoil_y_upper = airfoil_y[1 : (airfoil_x.size + 1) // 2 - 1]
-    airfoil_x_lower = airfoil_x[(airfoil_x.size + 1) // 2 : -1]
-    airfoil_y_lower = airfoil_y[(airfoil_y.size + 1) // 2 : -1]
+    airfoil_x_lower = airfoil_x[(airfoil_x.size + 1) // 2 + 1 : -1]
+    airfoil_y_lower = airfoil_y[(airfoil_y.size + 1) // 2 + 1 : -1]
 
     centroid_x = sum(airfoil_x) / len(airfoil_x)
     centroid_y = sum(airfoil_y) / len(airfoil_y)
@@ -488,10 +487,11 @@ mergePatchPairs
 );
 // ************************************************************************* //					
 """
+    from . import make_initial_condition, make_controlDict
 
     # blockMeshDict 파일 생성
     with open("./blockMeshDict", "w") as f:
         f.write(block_mesh_content)
 
-    controlDictMaker(centroid_x, centroid_y, area)
-    initialConditionMaker(args.angle_of_response)
+    make_controlDict(centroid_x, centroid_y, area)
+    make_initial_condition(args.angle_of_response)
