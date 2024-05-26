@@ -4,7 +4,7 @@ def make_controlDict(centroid_x, centroid_y, area, freestream_velocity):
   \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\\\    /   O peration     | Website:  https://openfoam.org
     \\\\  /    A nd           | Version:  11
-     \\\\/     M anipulation  |
+     \\\\/     M anipulation  | DAEHWA MADE THIS
 \*---------------------------------------------------------------------------*/
 FoamFile
 {{

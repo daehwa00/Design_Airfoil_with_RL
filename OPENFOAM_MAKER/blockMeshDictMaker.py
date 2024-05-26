@@ -231,7 +231,7 @@ def make_block_mesh_dict(airfoil_x, airfoil_y, aoa=5, freestream_velocity=222.22
   \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
    \\\\    /   O peration     | Website:  https://openfoam.org
     \\\\  /    A nd           | Version:  11
-     \\\\/     M anipulation  |
+     \\\\/     M anipulation  | DAEHWA MADE THIS
 \*---------------------------------------------------------------------------*/
 FoamFile
 {{
