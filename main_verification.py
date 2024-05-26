@@ -100,3 +100,22 @@ plot_cl_cd_ratio(data_4412, "NACA 4412", axes[2, 1], "plasma")
 
 plt.tight_layout()
 plt.show()
+
+
+# Re = V * L / nu
+# -> V = Re * nu / L
+
+nu = 1.5e-5  # Kinematic viscosity of air (m^2/s)
+RN_0012 = data_0012["RN"]
+RN_4412 = data_4412["RN"]
+
+AOA_0012 = data_0012["AOA"]
+AOA_4412 = data_4412["AOA"]
+
+
+for rn in RN_0012:
+    for aoa in AOA_0012:
+        freestream_velocity = rn * nu / 1.0
+        make_block_mesh_dict(
+            naca0012[:, 0], naca0012[:, 1], rn.aoa, freestream_velocity
+        )

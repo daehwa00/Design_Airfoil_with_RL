@@ -1,4 +1,4 @@
-def make_controlDict(centroid_x, centroid_y, area):
+def make_controlDict(centroid_x, centroid_y, area, freestream_velocity):
     control_dict_content = f"""/*--------------------------------*- C++ -*----------------------------------*\\
   =========                 |
   \\\\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
@@ -67,7 +67,7 @@ functions
 
         liftDir         (0 1 0);             // 양력 방향
         dragDir         (1 0 0);             // 항력 방향
-        magUInf         25.75;               // 유입 속도 (m/s)
+        magUInf         {freestream_velocity}; // 유입 속도 (m/s)
         lRef            1;                   // 참조 길이 (m)
         Aref            {area:.2f};           // 참조 면적 (m^2)
     }}

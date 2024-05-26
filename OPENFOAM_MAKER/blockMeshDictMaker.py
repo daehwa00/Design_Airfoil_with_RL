@@ -129,7 +129,7 @@ args = parser.parse_args()
 # print(f"i_17: {i_17}")  # V
 
 
-def make_block_mesh_dict(airfoil_x, airfoil_y, aoa=0):
+def make_block_mesh_dict(airfoil_x, airfoil_y, aoa=5, freestream_velocity=222.22):
     args.angle_of_response = aoa
     number_of_mesh_on_boundary_layer = n_10 = 17
     inlet_expansion_ratio_1 = o_28 = (
@@ -490,5 +490,5 @@ mergePatchPairs
     with open("./blockMeshDict", "w") as f:
         f.write(block_mesh_content)
 
-    make_controlDict(centroid_x, centroid_y, area)
-    make_initial_condition(args.angle_of_response)
+    make_controlDict(centroid_x, centroid_y, area, freestream_velocity)
+    make_initial_condition(args.angle_of_response, freestream_velocity)
