@@ -71,127 +71,125 @@ parser.add_argument(
     "--cell_size_in_middle", type=float, default=0.035, help="Cell size in middle"
 )
 
-
 # 인수 파싱
 args = parser.parse_args()
 
 
-number_of_mesh_on_boundary_layer = n_10 = 17
-inlet_expansion_ratio_1 = o_28 = (
-    args.cell_size_at_trailing_edge / args.max_cell_size_in_inlet
-)
-inlet_expansion_ratio_2 = o_29 = 0.25
-last_layer_thickness = (
-    args.first_layer_thickness * args.expansion_ratio**number_of_mesh_on_boundary_layer
-)
-o_10 = args.expansion_ratio**number_of_mesh_on_boundary_layer
-o_13 = args.max_cell_size_in_inlet / last_layer_thickness
-o_16 = args.max_cell_size_in_outlet / args.cell_size_at_trailing_edge
-number_of_mesh_out_of_boundary_layer = n_13 = 31
-number_of_mesh_at_tail = n_16 = 74
-number_of_mesh_in_leading = o_21 = 21
-number_of_mesh_in_trailing = o_23 = 20
-divide_point = o_20 = args.seperating_point_position
-expansion_ratio_in_leading = o_22 = (
-    args.cell_size_in_middle / args.cell_size_at_leading_edge
-)
-expansion_ratio_at_outlet = (
-    args.max_cell_size_in_inlet_x_outlet
-    * o_13
-    / args.max_cell_size_in_outlet
-    * (
-        (number_of_mesh_out_of_boundary_layer + number_of_mesh_on_boundary_layer)
-        / number_of_mesh_out_of_boundary_layer
+# print(f"last_layer_thickness: {last_layer_thickness}")  # V
+# print(f"expansion_ratio_at_outlet: {expansion_ratio_at_outlet}")  # V
+
+# # Print initial arguments for verification
+# print(f"distance_to_inlet: {args.distance_to_inlet}")
+# print(f"distance_to_outlet: {args.distance_to_outlet}")
+# print(f"angle_of_response: {args.angle_of_response}")
+# print(f"depth_z_in_direction: {args.depth_z_in_direction}")
+# print(f"mesh_scale: {args.mesh_scale}")
+# print(f"expansion_ratio: {args.expansion_ratio}")
+# print(f"first_layer_thickness: {args.first_layer_thickness}")
+# print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
+# print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
+# print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
+# print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
+# print(f"seperating_point_position: {args.seperating_point_position}")
+# print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
+# print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
+# print(f"cell_size_in_middle: {args.cell_size_in_middle}")
+
+
+# print(f"first_layer_thickness: {args.first_layer_thickness}")
+# print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
+# print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
+# print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
+# print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
+# print(f"seperating_point_position: {args.seperating_point_position}")
+# print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
+# print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
+# print(f"cell_size_in_middle: {args.cell_size_in_middle}")
+# print(f"expansion_ratio_in_trailing: {expansion_ratio_in_trailing}")  # V
+
+# print(f"number_of_mesh_on_boundary_layer: {number_of_mesh_on_boundary_layer}")  # V
+# print(
+#     f"number_of_mesh_out_of_boundary_layer: {number_of_mesh_out_of_boundary_layer}"
+# )  # V
+# print(f"number_of_mesh_at_tail: {number_of_mesh_at_tail}")  # V
+# print(f"number_of_mesh_in_trailing: {number_of_mesh_in_trailing}")  # V
+# print(f"inlet_expansion_ratio_1: {inlet_expansion_ratio_1}")  # V
+# print(f"inlet_expansion_ratio_2: {inlet_expansion_ratio_2}")  # V
+
+# print(f"o_10: {o_10}")  # V
+# print(f"o_13: {o_13}")  # V
+# print(f"o_16: {o_16}")  # V
+# print(f"h_11: {h_11}")  # V
+# print(f"i_11: {i_11}")  # V
+# print(f"h_13: {h_13}")  # V
+# print(f"i_13: {i_13}")  # V
+# print(f"h_15: {h_15}")  # V
+# print(f"i_15: {i_15}")  # V
+# print(f"h_17: {h_17}")  # V
+# print(f"i_17: {i_17}")  # V
+
+
+def make_block_mesh_dict(airfoil_x, airfoil_y, aoa=0):
+    args.angle_of_response = aoa
+    number_of_mesh_on_boundary_layer = n_10 = 17
+    inlet_expansion_ratio_1 = o_28 = (
+        args.cell_size_at_trailing_edge / args.max_cell_size_in_inlet
     )
-)
-r_of_mesh_in_trailing = 20
-expansion_ratio_in_trailing = o_24 = (
-    args.cell_size_in_middle / args.cell_size_at_trailing_edge
-)
+    inlet_expansion_ratio_2 = o_29 = 0.25
+    last_layer_thickness = (
+        args.first_layer_thickness
+        * args.expansion_ratio**number_of_mesh_on_boundary_layer
+    )
+    o_10 = args.expansion_ratio**number_of_mesh_on_boundary_layer
+    o_13 = args.max_cell_size_in_inlet / last_layer_thickness
+    o_16 = args.max_cell_size_in_outlet / args.cell_size_at_trailing_edge
+    number_of_mesh_out_of_boundary_layer = n_13 = 31
+    number_of_mesh_at_tail = n_16 = 74
+    number_of_mesh_in_leading = o_21 = 21
+    number_of_mesh_in_trailing = o_23 = 20
+    divide_point = o_20 = args.seperating_point_position
+    expansion_ratio_in_leading = o_22 = (
+        args.cell_size_in_middle / args.cell_size_at_leading_edge
+    )
+    expansion_ratio_at_outlet = (
+        args.max_cell_size_in_inlet_x_outlet
+        * o_13
+        / args.max_cell_size_in_outlet
+        * (
+            (number_of_mesh_out_of_boundary_layer + number_of_mesh_on_boundary_layer)
+            / number_of_mesh_out_of_boundary_layer
+        )
+    )
+    r_of_mesh_in_trailing = 20
+    expansion_ratio_in_trailing = o_24 = (
+        args.cell_size_in_middle / args.cell_size_at_trailing_edge
+    )
 
-h_11 = last_layer_thickness / args.distance_to_inlet * (o_13 - 1) + 1
-i_11 = math.log(o_13) / math.log(h_11)
-h_13 = args.cell_size_at_trailing_edge / args.distance_to_outlet * (o_16 - 1) + 1
-i_13 = math.log(o_16) / math.log(h_13)
-h_15 = (
-    args.cell_size_at_leading_edge
-    / args.seperating_point_position
-    * (expansion_ratio_in_leading - 1)
-) + 1
+    h_11 = last_layer_thickness / args.distance_to_inlet * (o_13 - 1) + 1
+    i_11 = math.log(o_13) / math.log(h_11)
+    h_13 = args.cell_size_at_trailing_edge / args.distance_to_outlet * (o_16 - 1) + 1
+    i_13 = math.log(o_16) / math.log(h_13)
+    h_15 = (
+        args.cell_size_at_leading_edge
+        / args.seperating_point_position
+        * (expansion_ratio_in_leading - 1)
+    ) + 1
 
-i_15 = math.log(expansion_ratio_in_leading) / math.log(h_15)
-h_17 = (
-    args.cell_size_at_trailing_edge
-    / (1 - args.cell_size_in_middle)
-    * (expansion_ratio_in_trailing - 1)
-    + 1
-)
-i_17 = math.log(expansion_ratio_in_trailing) / math.log(h_17)
+    i_15 = math.log(expansion_ratio_in_leading) / math.log(h_15)
+    h_17 = (
+        args.cell_size_at_trailing_edge
+        / (1 - args.cell_size_in_middle)
+        * (expansion_ratio_in_trailing - 1)
+        + 1
+    )
+    i_17 = math.log(expansion_ratio_in_trailing) / math.log(h_17)
 
-print(f"last_layer_thickness: {last_layer_thickness}")  # V
-print(f"expansion_ratio_at_outlet: {expansion_ratio_at_outlet}")  # V
-
-# Print initial arguments for verification
-print(f"distance_to_inlet: {args.distance_to_inlet}")
-print(f"distance_to_outlet: {args.distance_to_outlet}")
-print(f"angle_of_response: {args.angle_of_response}")
-print(f"depth_z_in_direction: {args.depth_z_in_direction}")
-print(f"mesh_scale: {args.mesh_scale}")
-print(f"expansion_ratio: {args.expansion_ratio}")
-print(f"first_layer_thickness: {args.first_layer_thickness}")
-print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
-print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
-print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
-print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
-print(f"seperating_point_position: {args.seperating_point_position}")
-print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
-print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
-print(f"cell_size_in_middle: {args.cell_size_in_middle}")
-
-
-print(f"first_layer_thickness: {args.first_layer_thickness}")
-print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
-print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
-print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
-print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
-print(f"seperating_point_position: {args.seperating_point_position}")
-print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
-print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
-print(f"cell_size_in_middle: {args.cell_size_in_middle}")
-print(f"expansion_ratio_in_trailing: {expansion_ratio_in_trailing}")  # V
-
-print(f"number_of_mesh_on_boundary_layer: {number_of_mesh_on_boundary_layer}")  # V
-print(
-    f"number_of_mesh_out_of_boundary_layer: {number_of_mesh_out_of_boundary_layer}"
-)  # V
-print(f"number_of_mesh_at_tail: {number_of_mesh_at_tail}")  # V
-print(f"number_of_mesh_in_trailing: {number_of_mesh_in_trailing}")  # V
-print(f"inlet_expansion_ratio_1: {inlet_expansion_ratio_1}")  # V
-print(f"inlet_expansion_ratio_2: {inlet_expansion_ratio_2}")  # V
-
-print(f"o_10: {o_10}")  # V
-print(f"o_13: {o_13}")  # V
-print(f"o_16: {o_16}")  # V
-print(f"h_11: {h_11}")  # V
-print(f"i_11: {i_11}")  # V
-print(f"h_13: {h_13}")  # V
-print(f"i_13: {i_13}")  # V
-print(f"h_15: {h_15}")  # V
-print(f"i_15: {i_15}")  # V
-print(f"h_17: {h_17}")  # V
-print(f"i_17: {i_17}")  # V
-
-
-# 꼭짓점 위치 계산
-inlet_x = 1
-outlet_x = 1 + args.distance_to_outlet
-inlet_negative_x = 1 - args.distance_to_inlet
-calculated_vertex_y = math.sin(math.pi / 180 * args.angle_of_response) * (
-    args.distance_to_outlet + 1
-)
-
-
-def make_block_mesh_dict(airfoil_x, airfoil_y):
+    inlet_x = 1
+    outlet_x = 1 + args.distance_to_outlet
+    inlet_negative_x = 1 - args.distance_to_inlet
+    calculated_vertex_y = math.sin(math.pi / 180 * args.angle_of_response) * (
+        args.distance_to_outlet + 1
+    )
     # airfoil의 가운데 점 찾기
     airfoil_x_upper = airfoil_x[1 : (airfoil_x.size + 1) // 2 - 1]
     airfoil_y_upper = airfoil_y[1 : (airfoil_x.size + 1) // 2 - 1]
