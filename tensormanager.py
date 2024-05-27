@@ -61,4 +61,6 @@ class TensorManager:
         self.rewards_tensor = self.rewards_tensor.view(self.env_num * self.horizon)
         self.values_tensor = self.values_tensor.view(self.env_num * (self.horizon + 1))
         self.log_probs_tensor = self.log_probs_tensor.view(self.env_num * self.horizon)
-        self.advantages_tensor = self.advantages_tensor.view(self.env_num * self.horizon)
+        self.advantages_tensor = self.advantages_tensor.view(
+            self.env_num * self.horizon
+        )

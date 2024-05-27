@@ -138,8 +138,8 @@ RN_4412 = data_4412["RN"]
 AOA_0012 = data_0012["AOA"]
 AOA_4412 = data_4412["AOA"]
 
-simulation_results_0012_file = "simulation_results_0012.json"
-simulation_results_4412_file = "simulation_results_4412.json"
+simulation_results_0012_file = "simulation/simulation_results_0012.json"
+simulation_results_4412_file = "simulation/simulation_results_4412.json"
 
 # Load or run simulations for NACA 0012
 simulation_results_0012 = load_simulation_results(simulation_results_0012_file)

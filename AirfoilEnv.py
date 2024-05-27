@@ -12,35 +12,39 @@ from scipy.interpolate import interp1d
 
 
 class CustomAirfoilEnv:
-    def __init__(self, num_points=80):
+    def __init__(self, num_points, angle_of_attack):
         self.num_points = num_points
+        self.angle_of_attack = angle_of_attack
         self._initial_circles = [((0.02, 0), 0.02), ((1 - 0.02, 0), 0.02)]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
-        self.best_lift_drag_ratio = 0
+        self.prev_lift_drag_ratio = 4.5
 
     def reset(self):
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
-        self.best_lift_drag_ratio = 0
+        self.prev_lift_drag_ratio = 4.5
         return self.get_state()
 
     def step(self, action, t=None):
         self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
         points, state = self.get_airfoil(self.circles, t=t)
         self.points = points
-        make_block_mesh_dict(points[:, 0], points[:, 1])
+        make_block_mesh_dict(
+            points[:, 0], points[:, 1], angle_of_attack=self.angle_of_attack
+        )
         Cd, Cl = run_simulation()
         lift_drag_ratio = self.calculate_reward(Cd, Cl)
-        reward = lift_drag_ratio - self.best_lift_drag_ratio
-        if lift_drag_ratio > self.best_lift_drag_ratio:
-            self.best_lift_drag_ratio = lift_drag_ratio
-            reward += 0.5
-        next_state = state
-        self.state = next_state
 
-        return next_state, reward
+        improvement = lift_drag_ratio - self.prev_lift_drag_ratio
+        reward = improvement
+        if improvement > 0:
+            reward += 1
+        self.prev_lift_drag_ratio = lift_drag_ratio
+        self.state = state
+
+        return state, reward, lift_drag_ratio
 
     def calculate_reward(self, Cd, Cl):
         # 양항비
@@ -75,7 +79,7 @@ class CustomAirfoilEnv:
 
         return all_points
 
-    def get_airfoil(self, circles, t=None):
+    def get_airfoil(self, circles, t=None, save_path="airfoil.png"):
         """
         주어진 원들을 사용하여 airfoil을 생성합니다.
         """
@@ -100,6 +104,11 @@ class CustomAirfoilEnv:
         ax.set_xlim(-0.2, 1.5)
         ax.set_ylim(-0.6, 0.6)
         ax.axis("off")
+
+        if save_path is not None:
+            fig.savefig(
+                save_path, format="png", dpi=50, bbox_inches="tight", pad_inches=0
+            )
 
         # 메모리에 이미지 저장
         buf = io.BytesIO()
@@ -236,5 +245,5 @@ class CustomAirfoilEnv:
         return sampled_points
 
 
-def make_env(num_points=80):
-    return CustomAirfoilEnv(num_points=num_points)
+def make_env(num_points=80, angle_of_attack=5.0):
+    return CustomAirfoilEnv(num_points=num_points, angle_of_attack=angle_of_attack)

@@ -18,10 +18,11 @@ processes = batch_size
 learning_rate = 1e-4
 number_of_trajectories = 16
 n_actions = 2
+angle_of_attack = 5.0
 
 if __name__ == "__main__":
     set_seed(42)  # 시드 고정
-    env = make_env(num_points=num_points)
+    env = make_env(num_points=num_points, angle_of_attack=angle_of_attack)
     agent = Agent(n_actions=n_actions, lr=learning_rate)
     trainer = Train(
         env=env,

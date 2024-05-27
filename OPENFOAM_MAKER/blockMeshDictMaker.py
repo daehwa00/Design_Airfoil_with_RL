@@ -129,8 +129,10 @@ args = parser.parse_args()
 # print(f"i_17: {i_17}")  # V
 
 
-def make_block_mesh_dict(airfoil_x, airfoil_y, aoa=5, freestream_velocity=222.22):
-    args.angle_of_response = aoa
+def make_block_mesh_dict(
+    airfoil_x, airfoil_y, angle_of_attack=5, freestream_velocity=222.22
+):
+    args.angle_of_response = angle_of_attack
     number_of_mesh_on_boundary_layer = n_10 = 17
     inlet_expansion_ratio_1 = o_28 = (
         args.cell_size_at_trailing_edge / args.max_cell_size_in_inlet

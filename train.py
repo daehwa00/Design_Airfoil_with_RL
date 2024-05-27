@@ -66,7 +66,9 @@ class Train:
 
                         # Critic
                         value = self.agent.get_value(state, use_grad=False)
-                        next_state, reward = self.env.step(scaled_actions, t=t)
+                        next_state, reward, lift_drag_ratio = self.env.step(
+                            scaled_actions, t=t
+                        )
 
                         tensor_manager.update_tensors(
                             state,
@@ -83,18 +85,15 @@ class Train:
                     next_value = self.agent.get_value(state, use_grad=False)
                     tensor_manager.values_tensor[n, -1] = next_value.squeeze()
 
-            sum_of_last_rewards = (
-                tensor_manager.rewards_tensor[:, -1].sum() / self.number_of_trajectories
-            )
             tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
-            tensor_manager.returns = (
+            tensor_manager.return_tensor = (
                 tensor_manager.advantages_tensor + tensor_manager.values_tensor[:, :-1]
             )
             tensor_manager.flatten_tensors()
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
 
-            self.print_logs(actor_loss, critic_loss, sum_of_last_rewards)
+            self.print_logs(actor_loss, critic_loss, lift_drag_ratio)
 
     def train(
         self,
@@ -151,7 +150,7 @@ class Train:
 
         return avg_actor_loss, avg_critic_loss
 
-    def get_gae(self, tensor_manager, gamma=0.99, lam=0.95):
+    def get_gae(self, tensor_manager, gamma=0.9, lam=0.95):
         rewards = tensor_manager.rewards_tensor
         values = tensor_manager.values_tensor
         num_env, horizon = rewards.shape
@@ -206,7 +205,7 @@ class Train:
 
         self.actor_loss_history.append(actor_loss)
         self.critic_loss_history.append(critic_loss)
-        self.rewards_history.append(sum_of_last_rewards.cpu().numpy())
+        self.rewards_history.append(sum_of_last_rewards)
 
         actor_loss = actor_loss.item() if torch.is_tensor(actor_loss) else actor_loss
         critic_loss = (
