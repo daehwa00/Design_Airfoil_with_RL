@@ -9,7 +9,7 @@ num_points = 49
 epochs = 10
 n_iterations = 100
 
-T = 10
+T = 5
 clip_range = 0.2
 beta = 0.03  # 엔트로피 항에 대한 가중치
 mini_batch_size = 10

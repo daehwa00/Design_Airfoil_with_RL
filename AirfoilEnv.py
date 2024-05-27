@@ -23,6 +23,7 @@ class CustomAirfoilEnv:
     def reset(self):
         self.circles = self._initial_circles.copy()
         self.points, self.state = self.get_airfoil(self.circles)
+        self.best_lift_drag_ratio = 0
         return self.get_state()
 
     def step(self, action, t=None):

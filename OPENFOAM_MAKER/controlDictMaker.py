@@ -69,7 +69,7 @@ functions
         dragDir         (1 0 0);             // 항력 방향
         magUInf         {freestream_velocity}; // 유입 속도 (m/s)
         lRef            1;                   // 참조 길이 (m)
-        Aref            {area:.2f};           // 참조 면적 (m^2)
+        Aref            1;           // 참조 면적 (m^2)
     }}
 }}
 // 추가: 잔차 기반 종료 조건
