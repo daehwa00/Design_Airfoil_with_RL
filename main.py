@@ -6,13 +6,13 @@ from utils import set_seed
 
 ENV_NAME = "AirfoilEnv"
 num_points = 49
-epochs = 10
+epochs = 20
 n_iterations = 100
 
 T = 5
 clip_range = 0.2
 beta = 0.03  # 엔트로피 항에 대한 가중치
-mini_batch_size = 10
+mini_batch_size = 32
 batch_size = 16
 processes = batch_size
 learning_rate = 1e-4
