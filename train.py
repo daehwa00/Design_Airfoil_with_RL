@@ -30,7 +30,7 @@ class Train:
         self.number_of_trajectories = number_of_trajectories
         self.n_iterations = n_iterations
         self.mini_batch_size = mini_batch_size
-        self.start_time = 0
+        # self.start_time = 0Se
         self.state = None  # Image Tensor
         self.running_reward = 0
         self.beta = beta

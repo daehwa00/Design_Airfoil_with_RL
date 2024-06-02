@@ -151,7 +151,7 @@ if not simulation_results_0012:
             make_block_mesh_dict(
                 naca0012["x"],
                 naca0012["y"],
-                aoa=aoa,
+                angle_of_attack=aoa,
                 freestream_velocity=freestream_velocity,
             )
             Cd, Cl = run_simulation(verbose=False)
@@ -174,7 +174,7 @@ if not simulation_results_4412:
             make_block_mesh_dict(
                 naca4412["x"],
                 naca4412["y"],
-                aoa=aoa,
+                angle_of_attack=aoa,
                 freestream_velocity=freestream_velocity,
             )
             Cd, Cl = run_simulation(verbose=False)
@@ -262,6 +262,25 @@ def plot_simulation_vs_experiment_cl_cd_ratio(data, simulation_data, title, colo
     plt.show()
 
 
+# CL에 3을 곱함
+# simulation_results_0012 = {
+#     rn: {
+#         "CL": [3.3 * cl for cl in simulation_results_0012[rn]["CL"]],
+#         "CD": simulation_results_0012[rn]["CD"],
+#         "AOA": simulation_results_0012[rn]["AOA"],
+#     }
+#     for rn in simulation_results_0012
+# }
+
+# simulation_results_4412 = {
+#     rn: {
+#         "CL": [3.3 * cl for cl in simulation_results_4412[rn]["CL"]],
+#         "CD": simulation_results_4412[rn]["CD"],
+#         "AOA": simulation_results_4412[rn]["AOA"],
+#     }
+#     for rn in simulation_results_4412
+
+# }
 # Plot CL for NACA 0012
 plot_simulation_vs_experiment_cl(
     data_0012, simulation_results_0012, "NACA 0012 CL vs AOA", "viridis"

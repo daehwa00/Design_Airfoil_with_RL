@@ -75,60 +75,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-# print(f"last_layer_thickness: {last_layer_thickness}")  # V
-# print(f"expansion_ratio_at_outlet: {expansion_ratio_at_outlet}")  # V
-
-# # Print initial arguments for verification
-# print(f"distance_to_inlet: {args.distance_to_inlet}")
-# print(f"distance_to_outlet: {args.distance_to_outlet}")
-# print(f"angle_of_response: {args.angle_of_response}")
-# print(f"depth_z_in_direction: {args.depth_z_in_direction}")
-# print(f"mesh_scale: {args.mesh_scale}")
-# print(f"expansion_ratio: {args.expansion_ratio}")
-# print(f"first_layer_thickness: {args.first_layer_thickness}")
-# print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
-# print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
-# print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
-# print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
-# print(f"seperating_point_position: {args.seperating_point_position}")
-# print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
-# print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
-# print(f"cell_size_in_middle: {args.cell_size_in_middle}")
-
-
-# print(f"first_layer_thickness: {args.first_layer_thickness}")
-# print(f"boundary_layer_thickness: {args.boundary_layer_thickness}")
-# print(f"max_cell_size_in_inlet: {args.max_cell_size_in_inlet}")
-# print(f"max_cell_size_in_outlet: {args.max_cell_size_in_outlet}")
-# print(f"max_cell_size_in_inlet_x_outlet: {args.max_cell_size_in_inlet_x_outlet}")
-# print(f"seperating_point_position: {args.seperating_point_position}")
-# print(f"cell_size_at_leading_edge: {args.cell_size_at_leading_edge}")
-# print(f"cell_size_at_trailing_edge: {args.cell_size_at_trailing_edge}")
-# print(f"cell_size_in_middle: {args.cell_size_in_middle}")
-# print(f"expansion_ratio_in_trailing: {expansion_ratio_in_trailing}")  # V
-
-# print(f"number_of_mesh_on_boundary_layer: {number_of_mesh_on_boundary_layer}")  # V
-# print(
-#     f"number_of_mesh_out_of_boundary_layer: {number_of_mesh_out_of_boundary_layer}"
-# )  # V
-# print(f"number_of_mesh_at_tail: {number_of_mesh_at_tail}")  # V
-# print(f"number_of_mesh_in_trailing: {number_of_mesh_in_trailing}")  # V
-# print(f"inlet_expansion_ratio_1: {inlet_expansion_ratio_1}")  # V
-# print(f"inlet_expansion_ratio_2: {inlet_expansion_ratio_2}")  # V
-
-# print(f"o_10: {o_10}")  # V
-# print(f"o_13: {o_13}")  # V
-# print(f"o_16: {o_16}")  # V
-# print(f"h_11: {h_11}")  # V
-# print(f"i_11: {i_11}")  # V
-# print(f"h_13: {h_13}")  # V
-# print(f"i_13: {i_13}")  # V
-# print(f"h_15: {h_15}")  # V
-# print(f"i_15: {i_15}")  # V
-# print(f"h_17: {h_17}")  # V
-# print(f"i_17: {i_17}")  # V
-
-
 def make_block_mesh_dict(
     airfoil_x, airfoil_y, angle_of_attack=5, freestream_velocity=222.22
 ):
