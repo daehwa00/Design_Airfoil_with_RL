@@ -154,7 +154,7 @@ simulation_results_4412_file = "simulation/simulation_results_4412.json"
 # Load or run simulations for NACA 0012
 simulation_results_0012 = load_simulation_results(simulation_results_0012_file)
 if not simulation_results_0012:
-    simulation_results_0012 = {rn: {"CL": [], "CD": [], "AOA": []} for rn in RN_0012}
+    simulation_results_0012 = {rn: {"CL": [], "CD": [], "CM":[], "AOA": []} for rn in RN_0012}
     for rn in RN_0012:
         for aoa in AOA_0012:
             freestream_velocity = rn * nu / 1.0
@@ -164,11 +164,12 @@ if not simulation_results_0012:
                 angle_of_attack=aoa,
                 freestream_velocity=freestream_velocity,
             )
-            Cd, Cl = run_simulation(verbose=False)
+            Cm, Cd, Cl = run_simulation(verbose=False)
             print(
-                f"Re = {rn:.1e}, AOA = {aoa}, CL = {Cl}, CD = {Cd}, freestream_velocity = {freestream_velocity:.2f}m/s"
+                f"Re = {rn:.1e}, AOA = {aoa}, CM = {Cm}, CL = {Cl}, CD = {Cd}, freestream_velocity = {freestream_velocity:.2f}m/s"
             )
 
+            simulation_results_0012[rn]["CM"].append(Cm)
             simulation_results_0012[rn]["CL"].append(Cl)
             simulation_results_0012[rn]["CD"].append(Cd)
             simulation_results_0012[rn]["AOA"].append(aoa)
@@ -177,7 +178,7 @@ if not simulation_results_0012:
 # Load or run simulations for NACA 4412
 simulation_results_4412 = load_simulation_results(simulation_results_4412_file)
 if not simulation_results_4412:
-    simulation_results_4412 = {rn: {"CL": [], "CD": [], "AOA": []} for rn in RN_4412}
+    simulation_results_4412 = {rn: {"CL": [], "CD": [], "CM" : [], "AOA": []} for rn in RN_4412}
     for rn in RN_4412:
         for aoa in AOA_4412:
             freestream_velocity = rn * nu / 1.0
@@ -194,6 +195,7 @@ if not simulation_results_4412:
 
             simulation_results_4412[rn]["CL"].append(Cl)
             simulation_results_4412[rn]["CD"].append(Cd)
+            simulation_results_4412[rn]["CM"].append(Cm)
             simulation_results_4412[rn]["AOA"].append(aoa)
     save_simulation_results(simulation_results_4412_file, simulation_results_4412)
 
@@ -227,6 +229,46 @@ def plot_simulation_vs_experiment_cl(data, simulation_data, title, colormap):
             plt.scatter(
                 sim_aoa_filtered,
                 sim_cl_filtered,
+                color=colors(i),
+                marker="x",
+                label=f"Simulation Re = {rn:.1e}",
+            )
+    plt.title(title)
+    plt.xlabel("AOA (degrees)")
+    plt.ylabel("CL")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_simulation_vs_experiment_cm(data, simulation_data, title, colormap):
+    colors = cm.get_cmap(colormap, len(data["RN"]))
+    plt.figure(figsize=(10, 7))
+    for i, rn in enumerate(data["RN"]):
+        if rn in data["CM"] and str(rn) in simulation_data:
+            aoa_filtered = [aoa for aoa in data["AOA"] if -5 <= aoa <= 5]
+            cm_filtered = [
+                cm for aoa, cm in zip(data["AOA"], data["CM"][rn]) if -5 <= aoa <= 5
+            ]
+            sim_aoa_filtered = [
+                aoa for aoa in simulation_data[str(rn)]["AOA"] if -5 <= aoa <= 5
+            ]
+            sim_cm_filtered = [
+                cm
+                for aoa, cm in zip(
+                    simulation_data[str(rn)]["AOA"], simulation_data[str(rn)]["CM"]
+                )
+                if -5 <= aoa <= 5
+            ]
+            plt.plot(
+                aoa_filtered,
+                cm_filtered,
+                label=f"Experimental Re = {rn:.1e}",
+                color=colors(i),
+                linestyle="--",
+            )
+            plt.scatter(
+                sim_aoa_filtered,
+                sim_cm_filtered,
                 color=colors(i),
                 marker="x",
                 label=f"Simulation Re = {rn:.1e}",
@@ -296,6 +338,7 @@ simulation_results_0012 = {
     rn: {
         "CL": [3.3 * cl for cl in simulation_results_0012[rn]["CL"]],
         "CD": [3.3 * cd for cd in simulation_results_0012[rn]["CD"]],
+        "CM": [cm for cm in simulation_results_0012[rn]["CM"]],
         "AOA": simulation_results_0012[rn]["AOA"],
     }
     for rn in simulation_results_0012
@@ -305,6 +348,7 @@ simulation_results_4412 = {
     rn: {
         "CL": [3.3 * cl for cl in simulation_results_4412[rn]["CL"]],
         "CD": [3.3 * cd for cd in simulation_results_4412[rn]["CD"]],
+        "CM": [cm for cm in simulation_results_4412[rn]["CM"]],
         "AOA": simulation_results_4412[rn]["AOA"],
     }
     for rn in simulation_results_4412
@@ -320,6 +364,11 @@ plot_simulation_vs_experiment_cl_cd_ratio(
     data_0012, simulation_results_0012, "NACA 0012 CL/CD vs AOA", "viridis"
 )
 
+# Plot CM for NACA 0012
+plot_simulation_vs_experiment_cm(
+    data_0012, simulation_results_0012, "NACA 0012 CM vs AOA", "viridis"
+)
+
 
 # Plot CL for NACA 4412
 plot_simulation_vs_experiment_cl(
@@ -329,4 +378,9 @@ plot_simulation_vs_experiment_cl(
 # Plot CL/CD for NACA 4412
 plot_simulation_vs_experiment_cl_cd_ratio(
     data_4412, simulation_results_4412, "NACA 4412 CL/CD vs AOA", "plasma"
+)
+
+# Plot CM for NACA 4412
+plot_simulation_vs_experiment_cm(
+    data_4412, simulation_results_4412, "NACA 4412 CM vs AOA", "plasma"
 )
