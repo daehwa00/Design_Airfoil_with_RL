@@ -14,10 +14,10 @@ def run_simulation(verbose=False):
     decompose_mesh(verbose)
     set_permissions(verbose)
     run_parallel_simulation(verbose)
-    Cd, Cl = read_force_data()
+    Cm, Cd, Cl = read_force_data()
     remove_forceCoeffs(verbose)
     os.chdir(original_directory)  # 원래 디렉토리로 돌아갑니다.
-    return Cd, Cl
+    return Cm, Cd, Cl
 
 
 def setup_simulation_environment():
@@ -114,8 +114,8 @@ def read_force_data():
         lines = file.readlines()
 
     last_line = lines[-1].split()
-    Cd, Cl = float(last_line[2]), float(last_line[3])
-    return Cd, Cl
+    Cm, Cd, Cl = float(last_line[1]), float(last_line[2]), float(last_line[3])
+    return Cm, Cd, Cl
 
 
 def remove_forceCoeffs(verbose):

@@ -50,6 +50,10 @@ class Train:
                 device=self.device,
             )
 
+            lift_drag_ratio_lst = []
+            best_lift_drag_ratio = -np.inf
+            best_img = None
+
             with torch.no_grad():
                 for n in range(self.number_of_trajectories):
                     state = self.env.reset()
@@ -66,7 +70,7 @@ class Train:
 
                         # Critic
                         value = self.agent.get_value(state, use_grad=False)
-                        next_state, reward, lift_drag_ratio = self.env.step(
+                        next_state, reward, lift_drag_ratio, img = self.env.step(
                             scaled_actions, t=t
                         )
 
@@ -84,6 +88,14 @@ class Train:
 
                     next_value = self.agent.get_value(state, use_grad=False)
                     tensor_manager.values_tensor[n, -1] = next_value.squeeze()
+                
+                    lift_drag_ratio_lst.append(lift_drag_ratio)
+                    if lift_drag_ratio > best_lift_drag_ratio:
+                        best_lift_drag_ratio = lift_drag_ratio
+                        best_img = img  # Save the best airfoil image
+                        file_name = f"best_airfoil_{best_lift_drag_ratio:.2f}.png"
+                        best_img.save(file_name)
+
 
             tensor_manager.advantages_tensor = self.get_gae(tensor_manager)
             tensor_manager.return_tensor = (
@@ -92,6 +104,7 @@ class Train:
             tensor_manager.flatten_tensors()
             # Train the agent
             actor_loss, critic_loss = self.train(tensor_manager)
+            lift_drag_ratio = sum(lift_drag_ratio_lst) / len(lift_drag_ratio_lst)
 
             self.print_logs(actor_loss, critic_loss, lift_drag_ratio)
 

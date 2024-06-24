@@ -17,7 +17,7 @@ batch_size = 16
 processes = batch_size
 learning_rate = 1e-4
 number_of_trajectories = 16
-n_actions = 2
+n_actions = 3
 angle_of_attack = 5.0
 
 if __name__ == "__main__":

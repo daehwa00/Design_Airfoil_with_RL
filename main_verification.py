@@ -1,20 +1,12 @@
 import os
 import json
-from NACA import *
-from utils import bezier_curve
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib.cm as cm
+from NACA import naca0012, naca4412, data_0012, data_4412
+from utils import bezier_curve
 from simulation import run_simulation
 from OPENFOAM_MAKER import make_block_mesh_dict
-import matplotlib.cm as cm
-import math
-
-# Load NACA 0012, 4412 data
-naca0012 = naca0012
-naca4412 = naca4412
-
-data_0012 = data_0012
-data_4412 = data_4412
 
 num_points = 36
 
@@ -28,12 +20,10 @@ bezier_naca4412 = bezier_curve(
     np.array([naca4412["x"], naca4412["y"]]).T, num=num_points
 )
 
-
 # Save simulation results to a file
 def save_simulation_results(filename, results):
     with open(filename, "w") as f:
         json.dump(results, f)
-
 
 # Load simulation results from a file
 def load_simulation_results(filename):
@@ -41,7 +31,6 @@ def load_simulation_results(filename):
         with open(filename, "r") as f:
             return json.load(f)
     return None
-
 
 # Function to plot airfoil shape
 def plot_airfoil(naca, title, ax, color):
@@ -53,7 +42,6 @@ def plot_airfoil(naca, title, ax, color):
     ax.set_title(f"{title} Airfoil")
     ax.legend()
     ax.grid(True)
-
 
 # Function to plot CL data
 def plot_cl(data, title, ax_cl, colormap):
@@ -74,6 +62,23 @@ def plot_cl(data, title, ax_cl, colormap):
     ax_cl.legend()
     ax_cl.grid(True)
 
+def plot_cm(data, title, ax_cm, colormap):
+    colors = cm.get_cmap(colormap, len(data["RN"]))
+    for i, rn in enumerate(data["RN"]):
+        if rn in data["CM"]:
+            ax_cm.plot(
+                data["AOA"],
+                data["CM"][rn],
+                label=f"Re = {rn:.1e}",
+                color=colors(i),
+                linestyle="--",
+            )
+
+    ax_cm.set_title(f"{title} CM vs AOA")
+    ax_cm.set_xlabel("AOA (degrees)")
+    ax_cm.set_ylabel("CM")
+    ax_cm.legend()
+    ax_cm.grid(True)
 
 # Function to plot CL/CD data
 def plot_cl_cd_ratio(data, title, ax, colormap):
@@ -103,9 +108,8 @@ def plot_cl_cd_ratio(data, title, ax, colormap):
     ax.legend()
     ax.grid(True)
 
-
 # Plot NACA 0012 and NACA 4412 in separate subplots
-fig, axes = plt.subplots(3, 2, figsize=(15, 15))
+fig, axes = plt.subplots(4, 2, figsize=(15, 15))
 
 # Plot NACA 0012 Airfoil Shape
 plot_airfoil(bezier_naca0012, "NACA 0012", axes[0, 0], "blue")
@@ -118,6 +122,12 @@ plot_cl(data_0012, "NACA 0012", axes[1, 0], "viridis")
 
 # Plot CL data for NACA 4412
 plot_cl(data_4412, "NACA 4412", axes[1, 1], "plasma")
+
+# Plot CM data for NACA 0012
+plot_cm(data_0012, "NACA 0012", axes[3, 0], "viridis")
+
+# Plot CM data for NACA 4412
+plot_cm(data_4412, "NACA 4412", axes[3, 1], "plasma")
 
 # Plot CL/CD ratio data for NACA 0012
 plot_cl_cd_ratio(data_0012, "NACA 0012", axes[2, 0], "viridis")
@@ -177,7 +187,7 @@ if not simulation_results_4412:
                 angle_of_attack=aoa,
                 freestream_velocity=freestream_velocity,
             )
-            Cd, Cl = run_simulation(verbose=False)
+            Cm, Cd, Cl = run_simulation(verbose=False)
             print(
                 f"Re = {rn:.1e}, AOA = {aoa}, CL = {Cl}, CD = {Cd}, freestream_velocity = {freestream_velocity:.2f}m/s"
             )
@@ -187,23 +197,36 @@ if not simulation_results_4412:
             simulation_results_4412[rn]["AOA"].append(aoa)
     save_simulation_results(simulation_results_4412_file, simulation_results_4412)
 
-
 # Function to plot simulation vs experimental CL data
 def plot_simulation_vs_experiment_cl(data, simulation_data, title, colormap):
     colors = cm.get_cmap(colormap, len(data["RN"]))
     plt.figure(figsize=(10, 7))
     for i, rn in enumerate(data["RN"]):
         if rn in data["CL"] and str(rn) in simulation_data:
+            aoa_filtered = [aoa for aoa in data["AOA"] if -5 <= aoa <= 5]
+            cl_filtered = [
+                cl for aoa, cl in zip(data["AOA"], data["CL"][rn]) if -5 <= aoa <= 5
+            ]
+            sim_aoa_filtered = [
+                aoa for aoa in simulation_data[str(rn)]["AOA"] if -5 <= aoa <= 5
+            ]
+            sim_cl_filtered = [
+                cl
+                for aoa, cl in zip(
+                    simulation_data[str(rn)]["AOA"], simulation_data[str(rn)]["CL"]
+                )
+                if -5 <= aoa <= 5
+            ]
             plt.plot(
-                data["AOA"],
-                data["CL"][rn],
+                aoa_filtered,
+                cl_filtered,
                 label=f"Experimental Re = {rn:.1e}",
                 color=colors(i),
                 linestyle="--",
             )
             plt.scatter(
-                simulation_data[str(rn)]["AOA"],
-                simulation_data[str(rn)]["CL"],
+                sim_aoa_filtered,
+                sim_cl_filtered,
                 color=colors(i),
                 marker="x",
                 label=f"Simulation Re = {rn:.1e}",
@@ -215,41 +238,48 @@ def plot_simulation_vs_experiment_cl(data, simulation_data, title, colormap):
     plt.grid(True)
     plt.show()
 
-
 # Function to plot simulation vs experimental CL/CD ratio data
 def plot_simulation_vs_experiment_cl_cd_ratio(data, simulation_data, title, colormap):
     colors = cm.get_cmap(colormap, len(data["RN"]))
     plt.figure(figsize=(10, 7))
     for i, rn in enumerate(data["RN"]):
         if rn in data["CL"] and rn in data["CD"] and str(rn) in simulation_data:
-            experimental_cl_cd_ratio = [
+            aoa_filtered = [aoa for aoa in data["AOA"] if -5 <= aoa <= 5]
+            cl_cd_filtered = [
                 cl / cd if cl is not None and cd is not None and cd != 0 else None
-                for cl, cd in zip(data["CL"][rn], data["CD"][rn])
+                for aoa, cl, cd in zip(data["AOA"], data["CL"][rn], data["CD"][rn])
+                if -5 <= aoa <= 5
             ]
-            experimental_cl_cd_ratio = [
+            cl_cd_filtered = [
                 ratio if ratio is None or np.abs(ratio) <= 200 else None
-                for ratio in experimental_cl_cd_ratio
+                for ratio in cl_cd_filtered
             ]  # Remove outliers
-            simulation_cl_cd_ratio = [
-                cl / cd if cl is not None and cd is not None and cd != 0 else None
-                for cl, cd in zip(
-                    simulation_data[str(rn)]["CL"], simulation_data[str(rn)]["CD"]
-                )
+            sim_aoa_filtered = [
+                aoa for aoa in simulation_data[str(rn)]["AOA"] if -5 <= aoa <= 5
             ]
-            simulation_cl_cd_ratio = [
+            sim_cl_cd_filtered = [
+                cl / cd if cl is not None and cd is not None and cd != 0 else None
+                for aoa, cl, cd in zip(
+                    simulation_data[str(rn)]["AOA"],
+                    simulation_data[str(rn)]["CL"],
+                    simulation_data[str(rn)]["CD"],
+                )
+                if -5 <= aoa <= 5
+            ]
+            sim_cl_cd_filtered = [
                 ratio if ratio is None or np.abs(ratio) <= 200 else None
-                for ratio in simulation_cl_cd_ratio
+                for ratio in sim_cl_cd_filtered
             ]  # Remove outliers
             plt.plot(
-                data["AOA"],
-                experimental_cl_cd_ratio,
+                aoa_filtered,
+                cl_cd_filtered,
                 label=f"Experimental Re = {rn:.1e}",
                 color=colors(i),
                 linestyle="--",
             )
             plt.scatter(
-                simulation_data[str(rn)]["AOA"],
-                simulation_cl_cd_ratio,
+                sim_aoa_filtered,
+                sim_cl_cd_filtered,
                 color=colors(i),
                 marker="x",
                 label=f"Simulation Re = {rn:.1e}",
@@ -261,26 +291,25 @@ def plot_simulation_vs_experiment_cl_cd_ratio(data, simulation_data, title, colo
     plt.grid(True)
     plt.show()
 
+# CL과 CD에 3.3을 곱함
+simulation_results_0012 = {
+    rn: {
+        "CL": [3.3 * cl for cl in simulation_results_0012[rn]["CL"]],
+        "CD": [3.3 * cd for cd in simulation_results_0012[rn]["CD"]],
+        "AOA": simulation_results_0012[rn]["AOA"],
+    }
+    for rn in simulation_results_0012
+}
 
-# CL에 3을 곱함
-# simulation_results_0012 = {
-#     rn: {
-#         "CL": [3.3 * cl for cl in simulation_results_0012[rn]["CL"]],
-#         "CD": simulation_results_0012[rn]["CD"],
-#         "AOA": simulation_results_0012[rn]["AOA"],
-#     }
-#     for rn in simulation_results_0012
-# }
+simulation_results_4412 = {
+    rn: {
+        "CL": [3.3 * cl for cl in simulation_results_4412[rn]["CL"]],
+        "CD": [3.3 * cd for cd in simulation_results_4412[rn]["CD"]],
+        "AOA": simulation_results_4412[rn]["AOA"],
+    }
+    for rn in simulation_results_4412
+}
 
-# simulation_results_4412 = {
-#     rn: {
-#         "CL": [3.3 * cl for cl in simulation_results_4412[rn]["CL"]],
-#         "CD": simulation_results_4412[rn]["CD"],
-#         "AOA": simulation_results_4412[rn]["AOA"],
-#     }
-#     for rn in simulation_results_4412
-
-# }
 # Plot CL for NACA 0012
 plot_simulation_vs_experiment_cl(
     data_0012, simulation_results_0012, "NACA 0012 CL vs AOA", "viridis"
@@ -290,6 +319,7 @@ plot_simulation_vs_experiment_cl(
 plot_simulation_vs_experiment_cl_cd_ratio(
     data_0012, simulation_results_0012, "NACA 0012 CL/CD vs AOA", "viridis"
 )
+
 
 # Plot CL for NACA 4412
 plot_simulation_vs_experiment_cl(

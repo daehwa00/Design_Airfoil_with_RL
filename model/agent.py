@@ -58,7 +58,9 @@ class Agent(nn.Module):
         a = 0.12
         # x 값을 0.2 ~ 0.8로 스케일링
         scaled_actions[0][0] = actions[0][0] * (1-a) + a
+        # y 값을 -0.1 ~ 0.1로 스케일링
+        scaled_actions[0][1] = actions[0][1] * 0.2 - 0.1
         # r 값을 0~0.2로 스케일링
-        scaled_actions[0][1] = actions[0][1] * a
+        scaled_actions[0][2] = actions[0][2] * a
 
         return scaled_actions

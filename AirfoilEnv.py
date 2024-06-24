@@ -18,18 +18,18 @@ class CustomAirfoilEnv:
         self._initial_circles = [((0.02, 0), 0.02), ((1 - 0.02, 0), 0.02)]
         # 초기 상태 설정
         self.circles = self._initial_circles.copy()
-        self.points, self.state = self.get_airfoil(self.circles)
+        self.points, self.state, _ = self.get_airfoil(self.circles)
         self.prev_lift_drag_ratio = 4.5
 
     def reset(self):
         self.circles = self._initial_circles.copy()
-        self.points, self.state = self.get_airfoil(self.circles)
+        self.points, self.state, _ = self.get_airfoil(self.circles)
         self.prev_lift_drag_ratio = 4.5
         return self.get_state()
 
     def step(self, action, t=None):
-        self.circles.append(((action[0], 0), action[1]))  # add circle with x, r
-        points, state = self.get_airfoil(self.circles, t=t)
+        self.circles.append(((action[0], action[1]), action[2]))  # add circle with x, r
+        points, state, img = self.get_airfoil(self.circles, t=t)
         self.points = points
         make_block_mesh_dict(
             points[:, 0], points[:, 1], angle_of_attack=self.angle_of_attack
@@ -44,7 +44,7 @@ class CustomAirfoilEnv:
         self.prev_lift_drag_ratio = lift_drag_ratio
         self.state = state
 
-        return state, reward, lift_drag_ratio
+        return state, reward, lift_drag_ratio, img
 
     def calculate_reward(self, Cd, Cl):
         # 양항비
@@ -110,6 +110,9 @@ class CustomAirfoilEnv:
                 save_path, format="png", dpi=50, bbox_inches="tight", pad_inches=0
             )
 
+        # 저장한 이미지를 다시 불러오기
+        img = Image.open(save_path)
+
         # 메모리에 이미지 저장
         buf = io.BytesIO()
         fig.savefig(
@@ -128,7 +131,7 @@ class CustomAirfoilEnv:
         ).squeeze(0)
 
         # 이미지 크기를 조정하지 않고 바로 반환
-        return interpolated_points, resized_sdf_tensor
+        return interpolated_points, resized_sdf_tensor, img
 
     def apply_sdf(self, buf):
         image = Image.open(buf).convert("L")
