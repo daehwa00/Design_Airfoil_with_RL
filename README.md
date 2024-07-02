@@ -54,17 +54,6 @@ To train the RL model and optimize propeller designs, use the following commands
     python main_verification.py
     ```
 
-## Directory Structure
-- `NACA/`: Contains NACA airfoil data.
-- `OPENFOAM_MAKER/`: Scripts for creating OpenFOAM simulations.
-- `model/`: Pre-trained models and training scripts.
-- `results/`: Output results from simulations and optimizations.
-- `simulation/`: Scripts to run and validate simulations.
-- `AirfoilEnv.py`: Custom environment for airfoil optimization.
-- `train.py`: Main script for training the RL model.
-- `simulation.py`: Runs the simulation environment.
-- `utils.py`: Utility functions for data processing and analysis.
-
 ## Simple Architecture Diagram
 <img width="1334" alt="arch" src="https://github.com/daehwa00/3D-propeller-Design/assets/62493036/2c8e1fd8-2b5b-4536-abd2-1e7c1c54c6c8">
 
@@ -82,6 +71,8 @@ To train the RL model and optimize propeller designs, use the following commands
 <img width="1270" alt="CM" src="https://github.com/daehwa00/3D-propeller-Design/assets/62493036/65e9d45b-b705-44d8-bc76-67d0a4fba3e1">
 
 To ensure the reliability of the simulation results, a comparison between experimental data and simulation outcomes was conducted. The validation results showed that while the lift coefficient (Cl) matched well with experimental data, the drag coefficient (Cd) and moment coefficient (Cm) did not align as closely.
+
+I am looking for someone with CFD skills to take this project forward.
 
 These results highlight the need for further research to improve the accuracy of Cd and Cm predictions. If you are interested in collaborating to advance this research, **please feel free to contact me.**
 
@@ -118,6 +109,3 @@ Contributions are welcome! Please follow these steps:
 3. Commit your changes (`git commit -am 'Add new feature'`).
 4. Push to the branch (`git push origin feature-branch`).
 5. Create a new Pull Request.
-
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
