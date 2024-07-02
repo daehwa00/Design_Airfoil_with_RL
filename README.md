@@ -103,7 +103,8 @@ The project successfully demonstrates the capability of reinforcement learning t
 - Improved lift-to-drag ratio.
 - Efficient exploration of the design space.
 - Convergence to optimal designs without manual intervention.
-![그림1](https://github.com/daehwa00/3D-propeller-Design/assets/62493036/d1ee0a00-5b0c-486b-a6d3-c6d9316c993c)
+![airfoil_animation_with_labels (1)](https://github.com/daehwa00/3D-propeller-Design/assets/62493036/0862ad6b-a374-42c0-bec5-8caad147f52f)
+
 
 This figure continues to show the creation of a high lift-drag airfoil.
 In the lower right-hand corner of the figure, we've represented airfoil's lift-drag ratio.
