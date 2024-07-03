@@ -2,15 +2,17 @@
 
 This repository contains the code and resources for a project aimed at optimizing the design of 3D propellers using Reinforcement Learning (RL). The project employs a CFD-based reward system to enhance the aerodynamic performance of propeller designs.
 
-**This README is not perfect, and even if you follow the Installation and Usage, it will not work correctly. If you have more questions, please contact me to daehwa001210@gmail.com.**
+**⚠️This README is not perfect⚠️, and even if you follow the Installation and Usage, it will not work correctly. If you have more questions, please contact me to daehwa001210@gmail.com.**
 
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Directory Structure](#directory-structure)
+- [Simple Architecture Diagram](#Simple-Architecture-Diagram)
+- [Environment Validation](#Environment-Validation)
 - [Environment Simulation](#environment-simulation)
+- [Agent Action Design](#Agent-Action-Design)
 - [Results](#results)
 - [Contributing](#contributing)
 - [License](#license)
